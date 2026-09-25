@@ -132,9 +132,12 @@ export default function Home() {
                 <span className="text-caption text-muted-foreground">
                   Architecture Status: Clean
                 </span>
-                <Button variant="outline" size="sm">
-                  Documentation
-                </Button>
+                <a
+                  href="/patient"
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  View Patient Portal →
+                </a>
               </CardFooter>
             </Card>
           </section>
