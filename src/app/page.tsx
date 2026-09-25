@@ -1,67 +1,143 @@
-import Image from "next/image";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Shell Header Preview */}
+      <header className="border-b border-border bg-surface px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div>
+            <h1 className="text-h3 font-bold text-primary">CareSync</h1>
+            <p className="text-caption text-muted-foreground">
+              Design System &amp; Shell Foundation Preview
+            </p>
+          </div>
+          <Badge variant="success">Foundation Verified</Badge>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="mx-auto max-w-6xl p-6 sm:p-8 space-y-8">
+        <div className="space-y-2">
+          <h2 className="text-h2">Design System &amp; Primitives</h2>
+          <p className="text-body text-muted-foreground">
+            Semantic design tokens, accessible UI primitives, and layout shells prepared for Stitch
+            design integration.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Badges Section */}
+        <section className="space-y-3">
+          <h3 className="text-h4">Semantic Badges</h3>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="default">Default / Primary</Badge>
+            <Badge variant="success">Success</Badge>
+            <Badge variant="warning">Warning</Badge>
+            <Badge variant="error">Error</Badge>
+            <Badge variant="info">Info</Badge>
+            <Badge variant="neutral">Neutral</Badge>
+          </div>
+        </section>
+
+        {/* Buttons Section */}
+        <section className="space-y-3">
+          <h3 className="text-h4">Buttons</h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="primary">Primary</Button>
+            <Button variant="secondary">Secondary</Button>
+            <Button variant="outline">Outline</Button>
+            <Button variant="ghost">Ghost</Button>
+            <Button variant="destructive">Destructive</Button>
+            <Button variant="primary" isLoading>
+              Loading
+            </Button>
+            <Button variant="primary" disabled>
+              Disabled
+            </Button>
+          </div>
+        </section>
+
+        {/* Form Inputs & Cards Grid */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Inputs Section */}
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Input Primitives</CardTitle>
+                <CardDescription>
+                  Accessible form input states with labels, helper text, and validation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Input
+                  label="Standard Input"
+                  placeholder="Enter text..."
+                  helperText="General purpose helper text"
+                />
+                <Input
+                  label="Required Input"
+                  required
+                  placeholder="Required field..."
+                />
+                <Input
+                  label="Validation Error State"
+                  error="This field is required or invalid"
+                  defaultValue="Invalid input value"
+                />
+                <Input
+                  label="Disabled Input"
+                  disabled
+                  placeholder="Disabled input"
+                />
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Cards & Composition Section */}
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Composable Card System</CardTitle>
+                <CardDescription>
+                  Structural container for statistics, widgets, forms, and lists.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-body text-muted-foreground">
+                  CareSync components consume centralized CSS design tokens defined in{" "}
+                  <code className="text-caption font-mono bg-surface-muted px-1.5 py-0.5 rounded">
+                    globals.css
+                  </code>
+                  .
+                </p>
+                <div className="rounded-md border border-border p-4 bg-surface-muted">
+                  <span className="text-label text-foreground">Next Step:</span>
+                  <p className="text-small text-muted-foreground mt-1">
+                    Translate individual Google Stitch designs into portal-specific components and
+                    routes.
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter className="justify-between">
+                <span className="text-caption text-muted-foreground">
+                  Architecture Status: Clean
+                </span>
+                <Button variant="outline" size="sm">
+                  Documentation
+                </Button>
+              </CardFooter>
+            </Card>
+          </section>
         </div>
       </main>
     </div>
