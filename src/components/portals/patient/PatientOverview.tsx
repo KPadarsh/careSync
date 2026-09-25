@@ -1,4 +1,4 @@
-import React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { PatientStats } from "./PatientStats";
 import { UpcomingAppointmentCard } from "./UpcomingAppointmentCard";
@@ -25,19 +25,23 @@ export function PatientOverview({ patientName = "Rahul" }: PatientOverviewProps)
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="primary" size="md" className="gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Book Appointment
-          </Button>
+          <Link href="/patient/appointments">
+            <Button variant="primary" size="md" className="gap-2 cursor-pointer">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Book Appointment
+            </Button>
+          </Link>
 
-          <Button variant="outline" size="md" className="gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download Report
-          </Button>
+          <Link href="/patient/lab-reports">
+            <Button variant="outline" size="md" className="gap-2 cursor-pointer">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Report
+            </Button>
+          </Link>
         </div>
       </div>
 

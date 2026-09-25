@@ -1,4 +1,4 @@
-import React from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 
 export interface ActivityItem {
@@ -63,12 +63,12 @@ export function RecentActivityFeed({
         ))}
       </div>
 
-      <button
-        type="button"
-        className="w-full mt-6 py-2 text-center text-caption font-semibold text-primary hover:underline transition-all cursor-pointer"
+      <Link
+        href="/patient/medical-records"
+        className="block w-full mt-6 py-2 text-center text-caption font-semibold text-primary hover:underline transition-all cursor-pointer"
       >
         View All Activity
-      </button>
+      </Link>
     </Card>
   );
 }

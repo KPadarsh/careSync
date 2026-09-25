@@ -1,4 +1,4 @@
-import React from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -75,12 +75,16 @@ export function UpcomingAppointmentCard({
 
         {/* Action Controls */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-            Reschedule
-          </Button>
-          <Button variant="primary" size="sm" className="flex-1 md:flex-none">
-            View Details
-          </Button>
+          <Link href="/patient/appointments" className="flex-1 md:flex-none">
+            <Button variant="outline" size="sm" className="w-full cursor-pointer">
+              Reschedule
+            </Button>
+          </Link>
+          <Link href="/patient/appointments" className="flex-1 md:flex-none">
+            <Button variant="primary" size="sm" className="w-full cursor-pointer">
+              View Details
+            </Button>
+          </Link>
         </div>
       </div>
     </Card>
