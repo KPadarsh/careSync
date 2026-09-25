@@ -1,6 +1,4 @@
 import React from "react";
-import { Card } from "@/components/ui/Card";
-
 import Link from "next/link";
 
 export interface PatientStatItem {
@@ -22,7 +20,7 @@ const defaultStats: PatientStatItem[] = [
     type: "info",
     href: "/patient/appointments",
     icon: (
-      <svg className="h-5 w-5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="h-5 w-5 text-[#3b82f6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     ),
@@ -35,7 +33,7 @@ const defaultStats: PatientStatItem[] = [
     type: "success",
     href: "/patient/prescriptions",
     icon: (
-      <svg className="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="h-5 w-5 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
       </svg>
     ),
@@ -48,8 +46,8 @@ const defaultStats: PatientStatItem[] = [
     type: "warning",
     href: "/patient/lab-reports",
     icon: (
-      <svg className="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      <svg className="h-5 w-5 text-[#f59e0b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
       </svg>
     ),
   },
@@ -60,55 +58,58 @@ const defaultStats: PatientStatItem[] = [
     type: "error",
     href: "/patient/billing",
     icon: (
-      <svg className="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="h-5 w-5 text-[#ef4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
       </svg>
     ),
   },
 ];
 
-const badgeBgStyles: Record<string, string> = {
-  info: "bg-info/10 text-info",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  error: "bg-error/10 text-error",
+const badgeStyles: Record<string, { bg: string; text: string }> = {
+  info: { bg: "bg-[#3b82f6]/10", text: "text-[#3b82f6]" },
+  success: { bg: "bg-[#22c55e]/10", text: "text-[#22c55e]" },
+  warning: { bg: "bg-[#f59e0b]/10", text: "text-[#f59e0b]" },
+  error: { bg: "bg-[#ef4444]/10", text: "text-[#ef4444]" },
 };
 
 export function PatientStats({ stats = defaultStats }: { stats?: PatientStatItem[] }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {stats.map((item) => (
-        <Link
-          key={item.id}
-          href={item.href}
-          className="group block"
-        >
-          <Card
-            className="p-4 transition-all duration-150 group-hover:shadow-md group-hover:border-primary/40 cursor-pointer h-full"
+      {stats.map((item) => {
+        const style = badgeStyles[item.type];
+        return (
+          <Link
+            key={item.id}
+            href={item.href}
+            className="group block"
           >
-            <div className="flex justify-between items-start mb-2">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center ${badgeBgStyles[item.type]}`}
-              >
-                {item.icon}
-              </div>
-              {item.badge !== undefined && (
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeBgStyles[item.type]}`}
+            <div
+              className="bg-white rounded-lg p-4 border border-[#e2e8f0] shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] hover:shadow-md transition-shadow cursor-pointer h-full"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${style.bg}`}
                 >
-                  {item.badge}
-                </span>
-              )}
+                  {item.icon}
+                </div>
+                {item.badge !== undefined && (
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-xl font-bold text-[#0b1c30] leading-none mb-1 group-hover:text-[#131b2e] transition-colors">
+                {item.value}
+              </h3>
+              <p className="text-xs font-medium text-[#45464d]">
+                {item.label}
+              </p>
             </div>
-            <h3 className="text-h3 font-bold text-foreground leading-none mb-1 group-hover:text-primary transition-colors">
-              {item.value}
-            </h3>
-            <p className="text-caption text-muted-foreground font-medium">
-              {item.label}
-            </p>
-          </Card>
-        </Link>
-      ))}
+          </Link>
+        );
+      })}
     </div>
   );
 }

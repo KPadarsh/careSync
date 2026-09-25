@@ -53,7 +53,7 @@ export function Header({
       </div>
 
       {/* Middle: Search Area Slot */}
-      {searchSlot && <div className="hidden md:flex max-w-xs flex-1 px-4">{searchSlot}</div>}
+      {searchSlot && <div className="hidden md:flex max-w-md flex-1 px-4">{searchSlot}</div>}
 
       {/* Right: Actions (Notifications) & User Menu */}
       <div className="flex items-center gap-2 sm:gap-3">

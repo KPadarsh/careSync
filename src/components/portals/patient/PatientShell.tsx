@@ -125,7 +125,7 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
           onMenuToggle={() => setSidebarOpen(true)}
           searchSlot={
             <div className="relative w-full">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#45464d]">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -133,18 +133,58 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
               <input
                 type="text"
                 placeholder="Search records, appointments..."
-                className="w-full bg-surface-muted border-none rounded-full pl-9 pr-4 py-1.5 text-caption text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-[#eff4ff] border-none rounded-full pl-9 pr-4 py-2 text-sm text-[#0b1c30] placeholder:text-[#45464d] focus:outline-none focus:ring-1 focus:ring-[#131b2e] transition-shadow"
               />
             </div>
           }
+          actionsSlot={
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button
+                type="button"
+                className="p-2 text-[#45464d] hover:text-[#0b1c30] rounded-full hover:bg-[#dce9ff]/50 transition-colors cursor-pointer"
+                aria-label="Notifications"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </button>
+
+              <Link
+                href="/patient/settings"
+                className="hidden md:block p-2 text-[#45464d] hover:text-[#0b1c30] rounded-full hover:bg-[#dce9ff]/50 transition-colors cursor-pointer"
+                aria-label="Help"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </Link>
+
+              <button
+                type="button"
+                className="p-2 text-[#45464d] hover:text-[#0b1c30] rounded-full hover:bg-[#dce9ff]/50 transition-colors cursor-pointer"
+                aria-label="Toggle theme"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              </button>
+
+              <div className="w-px h-6 bg-[#e2e8f0] mx-2 hidden md:block" />
+            </div>
+          }
           userSlot={
-            <Link href="/patient/profile" className="flex items-center gap-3 pl-3 border-l border-border cursor-pointer">
-              <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-caption font-bold text-primary">
-                RK
-              </div>
-              <div className="hidden sm:block text-left">
-                <p className="text-caption font-bold text-foreground leading-tight">Rahul K.</p>
-                <p className="text-[11px] text-muted-foreground leading-none">Patient</p>
+            <Link href="/patient/profile" className="flex items-center gap-3 cursor-pointer group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAspWh8zA7jLKE83i4wk2SS4wQIrN5wj1XV4kM0Nqb0ukekZ3_NW9MYJwmuI5DIMNSoFv8cRFB_VMvEJH6Ob5ejj3QuNbBmvHrZvf5JW5v6QCaUrb6aw3fsDic4C8xI85RsOGCn1DJwVb6OStqfxK4iJZuH6scXxed7SV9jkRHhnLm23D6Z3t6mccK60K28MiLiq23NAHQZVXovrTOLfDkBimG7hRda_2PCV7A2040s-em_Ivprl-A3GQ"
+                alt="Rahul K."
+                className="w-9 h-9 rounded-full object-cover border border-[#e2e8f0] group-hover:border-[#131b2e] transition-colors shrink-0"
+              />
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-semibold text-[#0b1c30] leading-tight group-hover:text-primary transition-colors">
+                  Rahul K.
+                </p>
+                <p className="text-xs text-[#45464d] leading-none mt-0.5">Patient</p>
               </div>
             </Link>
           }
@@ -156,15 +196,17 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Mobile Bottom Navigation Bar - Stitch Pill Layout */}
       <nav
-        className="fixed bottom-0 left-0 w-full z-40 md:hidden border-t border-border bg-surface flex justify-around items-center h-16 px-2 shadow-lg"
+        className="fixed bottom-0 left-0 w-full z-40 md:hidden border-t border-[#e2e8f0] bg-white flex justify-around items-center h-16 px-2 shadow-[0_-4px_6px_-1px_rgba(15,23,42,0.05)]"
         aria-label="Mobile Navigation"
       >
         <Link
           href="/patient"
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[11px] ${
-            pathname === "/patient" ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+          className={`flex flex-col items-center justify-center py-1 px-4 rounded-full text-xs transition-transform duration-150 ${
+            pathname === "/patient"
+              ? "bg-[#86f2e4] text-[#006f66] font-bold"
+              : "text-[#45464d] hover:text-[#0b1c30]"
           }`}
         >
           <svg className="h-5 w-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -175,8 +217,10 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/patient/appointments"
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[11px] ${
-            pathname.startsWith("/patient/appointments") ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+          className={`flex flex-col items-center justify-center py-1 px-4 rounded-full text-xs transition-transform duration-150 ${
+            pathname.startsWith("/patient/appointments")
+              ? "bg-[#86f2e4] text-[#006f66] font-bold"
+              : "text-[#45464d] hover:text-[#0b1c30]"
           }`}
         >
           <svg className="h-5 w-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -187,8 +231,10 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/patient/medical-records"
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[11px] ${
-            pathname.startsWith("/patient/medical-records") ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+          className={`flex flex-col items-center justify-center py-1 px-4 rounded-full text-xs transition-transform duration-150 ${
+            pathname.startsWith("/patient/medical-records")
+              ? "bg-[#86f2e4] text-[#006f66] font-bold"
+              : "text-[#45464d] hover:text-[#0b1c30]"
           }`}
         >
           <svg className="h-5 w-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -199,8 +245,10 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/patient/messages"
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[11px] ${
-            pathname.startsWith("/patient/messages") ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+          className={`flex flex-col items-center justify-center py-1 px-4 rounded-full text-xs transition-transform duration-150 ${
+            pathname.startsWith("/patient/messages")
+              ? "bg-[#86f2e4] text-[#006f66] font-bold"
+              : "text-[#45464d] hover:text-[#0b1c30]"
           }`}
         >
           <svg className="h-5 w-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -211,8 +259,10 @@ export function PatientShell({ children }: { children: React.ReactNode }) {
 
         <Link
           href="/patient/profile"
-          className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-[11px] ${
-            pathname.startsWith("/patient/profile") ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+          className={`flex flex-col items-center justify-center py-1 px-4 rounded-full text-xs transition-transform duration-150 ${
+            pathname.startsWith("/patient/profile")
+              ? "bg-[#86f2e4] text-[#006f66] font-bold"
+              : "text-[#45464d] hover:text-[#0b1c30]"
           }`}
         >
           <svg className="h-5 w-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

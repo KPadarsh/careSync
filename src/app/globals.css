@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  /* Colors - Light Theme */
+  /* Google Stitch Design Tokens - CareSync Patient Portal */
   --background: #f8fafc;
-  --foreground: #0f172a;
+  --foreground: #0b1c30;
   --surface: #ffffff;
-  --surface-muted: #f1f5f9;
+  --surface-muted: #eff4ff;
   --border: #e2e8f0;
 
-  --primary: #0284c7;
+  --primary: #131b2e;
   --primary-foreground: #ffffff;
   --primary-container: #131b2e;
+  --on-primary: #ffffff;
   --on-primary-container: #7c839b;
+  --on-primary-fixed-variant: #3f465c;
+
   --secondary: #006a61;
   --secondary-foreground: #ffffff;
+  --secondary-fixed: #89f5e7;
+  --secondary-fixed-dim: #6bd8cb;
   --secondary-container: #86f2e4;
   --on-secondary-container: #006f66;
 
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #eff4ff;
+  --muted-foreground: #45464d;
 
-  --surface-container-low: #f8faff;
-  --surface-container-high: #e2e8f0;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eff4ff;
+  --surface-container-high: #dce9ff;
 
-  --success: #16a34a;
+  --success: #22c55e;
   --success-foreground: #ffffff;
-  --warning: #d97706;
+  --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  --error: #dc2626;
+  --error: #ef4444;
   --error-foreground: #ffffff;
-  --info: #2563eb;
+  --error-container: #ffdad6;
+  --info: #3b82f6;
   --info-foreground: #ffffff;
 
   /* Border Radius */
@@ -38,10 +45,10 @@
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Shadows matching Stitch */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.05), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.05), 0 4px 6px -4px rgb(15 23 42 / 0.05);
 }
 
 @theme inline {
@@ -55,8 +62,12 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-container: var(--primary-container);
   --color-on-primary-container: var(--on-primary-container);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
   --color-secondary-container: var(--secondary-container);
   --color-on-secondary-container: var(--on-secondary-container);
 
@@ -72,6 +83,7 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-error: var(--error);
   --color-error-foreground: var(--error-foreground);
+  --color-error-container: var(--error-container);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
@@ -80,35 +92,32 @@
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #090d16;
-    --foreground: #f8fafc;
-    --surface: #0f172a;
-    --surface-muted: #1e293b;
-    --border: #334155;
+.dark {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --surface: #0f172a;
+  --surface-muted: #1e293b;
+  --border: #334155;
 
-    --primary: #38bdf8;
-    --primary-foreground: #0f172a;
-    --secondary: #94a3b8;
-    --secondary-foreground: #0f172a;
+  --primary: #38bdf8;
+  --primary-foreground: #0f172a;
+  --secondary: #94a3b8;
+  --secondary-foreground: #0f172a;
 
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
 
-    --success: #22c55e;
-    --success-foreground: #052e16;
-    --warning: #f59e0b;
-    --warning-foreground: #451a03;
-    --error: #ef4444;
-    --error-foreground: #450a0a;
-    --info: #3b82f6;
-    --info-foreground: #0f172a;
-  }
+  --success: #22c55e;
+  --success-foreground: #052e16;
+  --warning: #f59e0b;
+  --warning-foreground: #451a03;
+  --error: #ef4444;
+  --error-foreground: #450a0a;
+  --info: #3b82f6;
+  --info-foreground: #0f172a;
 }
 
 body {
