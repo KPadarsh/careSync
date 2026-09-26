@@ -1,0 +1,15 @@
+export { DoctorShell } from "./DoctorShell";
+export { DashboardView } from "./DashboardView";
+export { QueueView } from "./QueueView";
+export { PatientsView } from "./PatientsView";
+export { PatientClinicalView } from "./PatientClinicalView";
+export { ActiveConsultationView } from "./ActiveConsultationView";
+export { PrescriptionsView } from "./PrescriptionsView";
+export { LabReportsView } from "./LabReportsView";
+export { LabReportDetailView } from "./LabReportDetailView";
+export { MedicalRecordsView } from "./MedicalRecordsView";
+export { FollowUpsView } from "./FollowUpsView";
+export { NotificationsView } from "./NotificationsView";
+export { ProfileView } from "./ProfileView";
+export { SettingsView } from "./SettingsView";
+export * from "./DoctorIcons";

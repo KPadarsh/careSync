@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function PatientDashboardPage() {
   return (
     <PatientShell>
-      <PatientOverview patientName="Rahul" />
+      <PatientOverview />
     </PatientShell>
   );
 }

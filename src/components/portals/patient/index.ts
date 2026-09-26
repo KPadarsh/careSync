@@ -13,3 +13,6 @@ export * from "./BillingView";
 export * from "./MessagesView";
 export * from "./ProfileView";
 export * from "./SettingsView";
+export * from "./VisitsView";
+export * from "./FollowUpsView";
+export * from "./NotificationsView";
