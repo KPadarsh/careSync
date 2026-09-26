@@ -13,6 +13,7 @@ import {
   Queue,
   NursingAssessment,
   NurseTask,
+  LabSample,
 } from "@/models";
 import { hashPassword } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
@@ -1459,6 +1460,200 @@ export async function seedCareSyncDatabase() {
     }
   }
 
-  console.log("CareSync patient, receptionist, nurse, and doctor database seeded successfully.");
-  return { patientUser, patientRecord, receptionUser, nurseUser, doctorUser, doctors };
+  // 24. Seed Lab Technician User if not exists
+  let labTechUser = await User.findOne({ email: "arun.lab@caresync.com" });
+  if (!labTechUser) {
+    console.log("Seeding Lab Technician user Arun Kumar...");
+    labTechUser = await User.create({
+      name: "Arun Kumar",
+      email: "arun.lab@caresync.com",
+      passwordHash: hashPassword("Password@123"),
+      role: ROLES.LAB_TECHNICIAN,
+      phone: "+1 (555) 019-3829",
+      avatar:
+        "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=300&q=80",
+      status: "active",
+    });
+  }
+
+  // 25. Seed Lab Samples & Requests if none exist
+  const existingSampleCount = await LabSample.countDocuments();
+  const patList = await Patient.find({}).limit(5);
+  if (existingSampleCount === 0 && patList.length >= 3) {
+    console.log("Seeding Lab Samples and active diagnostic requests...");
+    const pat1 = patList[0]; // Rahul Verma
+    const pat2 = patList[1]; // Arjun / Sara
+    const pat3 = patList[2]; // Priya / Marcus
+    const doc1 = doctors[0] || (await Doctor.findOne({}));
+
+    // Sample 1: Rahul Verma - CBC
+    const sample1 = await LabSample.create({
+      sampleId: "SMP-2026-00125",
+      barcode: "BC-9812-00125",
+      patientId: pat1._id,
+      testName: "Complete Blood Count (CBC)",
+      sampleType: "Venous Blood",
+      containerType: "EDTA Tube (Purple Top)",
+      collectionVolume: "4 mL",
+      collectedBy: "Arun Kumar",
+      collectedAt: new Date(Date.now() - 40 * 60 * 1000),
+      status: "collected",
+      storageLocation: "Rack A-1, Main Refrigerator (4°C)",
+      notes: "Free flow draw, no hemolysis noted.",
+    });
+
+    // Sample 2: Arjun Kumar - Blood Glucose
+    const sample2 = await LabSample.create({
+      sampleId: "SMP-2026-00126",
+      barcode: "BC-9812-00126",
+      patientId: pat2._id,
+      testName: "Blood Glucose (Fasting)",
+      sampleType: "Plasma",
+      containerType: "Sodium Fluoride (Grey Top)",
+      collectionVolume: "2 mL",
+      collectedBy: "Arun Kumar",
+      collectedAt: new Date(Date.now() - 75 * 60 * 1000),
+      status: "processing",
+      storageLocation: "Benchtop Centrifuge 2",
+      notes: "12-hour fasting confirmed with patient.",
+    });
+
+    // Sample 3: Sara Thomas - Lipid Profile (STAT)
+    const sample3 = await LabSample.create({
+      sampleId: "SMP-2026-00127",
+      barcode: "BC-9812-00127",
+      patientId: pat3._id,
+      testName: "Lipid Profile Panel",
+      sampleType: "Serum",
+      containerType: "SST Gel Separator (Gold Top)",
+      collectionVolume: "5 mL",
+      collectedBy: "Arun Kumar",
+      collectedAt: new Date(Date.now() - 110 * 60 * 1000),
+      status: "processing",
+      storageLocation: "Chemistry Analyzer Cobas-C",
+      notes: "STAT urgent request from Dr. Anil Kumar.",
+    });
+
+    // Seed/Update Lab Requests in different workflow states
+    await LabReport.create([
+      {
+        patientId: pat1._id,
+        doctorId: doc1._id,
+        sampleId: sample1._id,
+        sampleCode: "SMP-2026-00125",
+        testName: "Complete Blood Count (CBC)",
+        department: "Hematology",
+        priority: "routine",
+        clinicalReason: "Routine checkup and fatigue evaluation",
+        instructions: "Standard adult venipuncture. EDTA whole blood.",
+        sampleCollectionDate: new Date(Date.now() - 40 * 60 * 1000),
+        status: "sample-collected",
+        summary: "Sample collected in phlebotomy station. Awaiting hematology analyzer batch.",
+        technicianNotes: "Specimen well mixed, no microclots observed.",
+        results: [],
+      },
+      {
+        patientId: pat2._id,
+        doctorId: doc1._id,
+        sampleId: sample2._id,
+        sampleCode: "SMP-2026-00126",
+        testName: "Blood Glucose (Fasting)",
+        department: "Clinical Chemistry",
+        priority: "urgent",
+        clinicalReason: "Suspected type 2 diabetes monitoring",
+        instructions: "Fasting 10-12 hours prior.",
+        sampleCollectionDate: new Date(Date.now() - 75 * 60 * 1000),
+        status: "processing",
+        summary: "Centrifuged and mounted on automated clinical chemistry analyzer.",
+        technicianNotes: "Plasma separated cleanly.",
+        results: [],
+      },
+      {
+        patientId: pat3._id,
+        doctorId: doc1._id,
+        sampleId: sample3._id,
+        sampleCode: "SMP-2026-00127",
+        testName: "Lipid Profile Panel",
+        department: "Clinical Chemistry",
+        priority: "stat",
+        clinicalReason: "Cardiovascular risk stratification / statin evaluation",
+        instructions: "Fasting 12 hours. Centrifuge within 30 minutes.",
+        sampleCollectionDate: new Date(Date.now() - 110 * 60 * 1000),
+        status: "result-entered",
+        summary: "Results entered by technician. Ready for pathologist review.",
+        technicianNotes: "Slightly lipemic serum. Analyzer calibration verified with normal controls.",
+        results: [
+          { parameter: "Total Cholesterol", value: "242", unit: "mg/dL", referenceRange: "< 200", flag: "high" },
+          { parameter: "Triglycerides", value: "198", unit: "mg/dL", referenceRange: "< 150", flag: "high" },
+          { parameter: "HDL Cholesterol", value: "38", unit: "mg/dL", referenceRange: "> 40", flag: "low" },
+          { parameter: "LDL Cholesterol", value: "164", unit: "mg/dL", referenceRange: "< 100", flag: "high" },
+        ],
+      },
+      {
+        patientId: pat1._id,
+        doctorId: doc1._id,
+        testName: "Renal Function Test (RFT)",
+        department: "Biochemistry",
+        priority: "routine",
+        clinicalReason: "Pre-operative biochemical assessment",
+        instructions: "Routine morning draw.",
+        sampleCollectionDate: new Date(),
+        status: "requested",
+        summary: "Doctor order received. Patient arriving for sample collection.",
+        results: [],
+      },
+      {
+        patientId: pat2._id,
+        doctorId: doc1._id,
+        testName: "Thyroid Stimulating Hormone (TSH)",
+        department: "Endocrinology",
+        priority: "routine",
+        clinicalReason: "Hypothyroidism follow-up",
+        instructions: "No thyroid meds prior to morning draw.",
+        sampleCollectionDate: new Date(),
+        status: "sample-pending",
+        summary: "Patient queued at reception phlebotomy intake.",
+        results: [],
+      },
+    ]);
+  }
+
+  // 26. Seed Lab Technician Notifications if none exist
+  if (labTechUser) {
+    const labNotifCount = await Notification.countDocuments({
+      recipientId: labTechUser._id,
+    });
+    if (labNotifCount === 0) {
+      console.log("Seeding Lab Technician notifications...");
+      await Notification.insertMany([
+        {
+          recipientId: labTechUser._id,
+          title: "STAT Lab Order: Sara Thomas",
+          message: "Dr. Anil Kumar ordered STAT Lipid Profile Panel for Station 4.",
+          type: "lab_report",
+          link: "/lab/requests",
+          isRead: false,
+        },
+        {
+          recipientId: labTechUser._id,
+          title: "Sample Ready for Phlebotomy",
+          message: "Patient Rahul Verma checked in for Complete Blood Count draw.",
+          type: "system",
+          link: "/lab/samples",
+          isRead: false,
+        },
+        {
+          recipientId: labTechUser._id,
+          title: "Pathologist Review Queue",
+          message: "Lipid Profile results awaiting review by Dr. Sunita Patil.",
+          type: "lab_report",
+          link: "/lab/tests",
+          isRead: true,
+        },
+      ]);
+    }
+  }
+
+  console.log("CareSync patient, receptionist, nurse, doctor, and lab database seeded successfully.");
+  return { patientUser, patientRecord, receptionUser, nurseUser, doctorUser, doctors, labTechUser };
 }

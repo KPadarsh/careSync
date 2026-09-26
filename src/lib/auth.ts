@@ -434,3 +434,80 @@ export async function requireDoctorSession(): Promise<{
   }
   return session;
 }
+
+/**
+ * Get the current authenticated lab technician session.
+ * If no session exists, seeds database and logs in default technician Arun Kumar.
+ */
+export async function getLabTechSession(): Promise<{
+  user: IUser;
+  role: Role;
+  station: string;
+} | null> {
+  await connectToDatabase();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+
+  if (sessionCookie?.value) {
+    const payload = verifySession(sessionCookie.value);
+    if (
+      payload &&
+      (payload.role === ROLES.LAB_TECHNICIAN || payload.role === ROLES.ADMIN)
+    ) {
+      const user = await User.findById(payload.userId);
+      if (user) {
+        return {
+          user,
+          role: user.role,
+          station: "Diagnostic Station A-4",
+        };
+      }
+    }
+  }
+
+  // Ensure database is seeded with lab technician
+  const { seedCareSyncDatabase } = await import("@/lib/seed");
+  await seedCareSyncDatabase();
+
+  const labUser = await User.findOne({
+    email: "arun.lab@caresync.com",
+  });
+
+  if (labUser) {
+    try {
+      await setSessionCookie({
+        userId: labUser._id.toString(),
+        email: labUser.email,
+        role: labUser.role,
+      });
+    } catch {
+      // Ignore if called in read-only phase
+    }
+    return {
+      user: labUser,
+      role: labUser.role,
+      station: "Diagnostic Station A-4",
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Strictly require an authenticated lab technician session.
+ */
+export async function requireLabTechSession(): Promise<{
+  user: IUser;
+  role: Role;
+  station: string;
+}> {
+  const session = await getLabTechSession();
+  if (
+    !session ||
+    (session.role !== ROLES.LAB_TECHNICIAN && session.role !== ROLES.ADMIN)
+  ) {
+    throw new Error("UNAUTHORIZED_LAB_TECHNICIAN");
+  }
+  return session;
+}
+

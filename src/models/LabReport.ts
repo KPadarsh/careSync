@@ -8,15 +8,35 @@ export interface ILabResultItem {
   flag: "normal" | "high" | "low" | "critical";
 }
 
+export type LabRequestStatus =
+  | "requested"
+  | "sample-pending"
+  | "sample-collected"
+  | "processing"
+  | "result-entered"
+  | "submitted-for-review"
+  | "verified"
+  | "finalized"
+  | "pending"
+  | "in-progress";
+
 export interface ILabReport extends Document {
   patientId: Types.ObjectId;
   doctorId: Types.ObjectId;
+  sampleId?: Types.ObjectId; // Reference to LabSample
+  sampleCode?: string; // e.g. SMP-2026-00125
   testName: string;
   department: string;
+  priority: "routine" | "urgent" | "stat";
+  clinicalReason?: string;
+  instructions?: string;
   sampleCollectionDate: Date;
   verifiedDate?: Date;
-  status: "verified" | "finalized" | "pending" | "in-progress";
+  submittedAt?: Date;
+  submittedBy?: string; // Technician Name
+  status: LabRequestStatus;
   summary: string;
+  technicianNotes?: string;
   verifiedBy?: string;
   results: ILabResultItem[];
   fileUrl?: string;
@@ -53,17 +73,45 @@ const LabReportSchema = new Schema<ILabReport>(
       required: true,
       index: true,
     },
-    testName: { type: String, required: true, trim: true },
-    department: { type: String, required: true, trim: true },
-    sampleCollectionDate: { type: Date, required: true },
-    verifiedDate: { type: Date },
-    status: {
-      type: String,
-      enum: ["verified", "finalized", "pending", "in-progress"],
-      default: "verified",
+    sampleId: {
+      type: Schema.Types.ObjectId,
+      ref: "LabSample",
       index: true,
     },
-    summary: { type: String, required: true },
+    sampleCode: { type: String, trim: true },
+    testName: { type: String, required: true, trim: true },
+    department: { type: String, required: true, trim: true, default: "Diagnostic Pathology" },
+    priority: {
+      type: String,
+      enum: ["routine", "urgent", "stat"],
+      default: "routine",
+      index: true,
+    },
+    clinicalReason: { type: String, default: "" },
+    instructions: { type: String, default: "" },
+    sampleCollectionDate: { type: Date, default: Date.now },
+    verifiedDate: { type: Date },
+    submittedAt: { type: Date },
+    submittedBy: { type: String },
+    status: {
+      type: String,
+      enum: [
+        "requested",
+        "sample-pending",
+        "sample-collected",
+        "processing",
+        "result-entered",
+        "submitted-for-review",
+        "verified",
+        "finalized",
+        "pending",
+        "in-progress",
+      ],
+      default: "sample-pending",
+      index: true,
+    },
+    summary: { type: String, default: "" },
+    technicianNotes: { type: String, default: "" },
     verifiedBy: { type: String, default: "Dr. Sunita Patil, MD Pathology" },
     results: { type: [LabResultItemSchema], default: [] },
     fileUrl: { type: String },
