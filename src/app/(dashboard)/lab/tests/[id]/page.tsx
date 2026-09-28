@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { LabShell, ResultEntryView } from "@/components/portals/lab";
+import { LabShell, TestDetailView } from "@/components/portals/lab";
 
 export const metadata: Metadata = {
-  title: "Test Result Entry | CareSync",
-  description: "Enter analyzed parameter values, reference ranges, and submit result for Pathologist review.",
+  title: "Test Result Entry Station | CareSync",
+  description:
+    "Enter analytical parameter values, units, reference intervals, operational notes, and submit results for pathologist review.",
 };
 
-export default async function LabResultEntryPage({
+export default async function LabTestDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -14,7 +15,7 @@ export default async function LabResultEntryPage({
   const { id } = await params;
   return (
     <LabShell>
-      <ResultEntryView id={id} />
+      <TestDetailView id={id} />
     </LabShell>
   );
 }

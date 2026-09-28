@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireLabTechSession } from "@/lib/auth";
-import { LabReport, Patient, Doctor, LabSample } from "@/models";
+import { requireLabSession } from "@/lib/auth";
+import { LabReport, Patient, Doctor } from "@/models";
 
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    await requireLabTechSession();
+    await requireLabSession();
 
     const { searchParams } = new URL(request.url);
-    const filter = searchParams.get("filter") || "all"; // all, processing, ready, completed
+    const bench = searchParams.get("bench")?.toLowerCase() || "all";
+    const status = searchParams.get("status")?.toLowerCase() || "all";
     const search = searchParams.get("search")?.trim().toLowerCase();
 
+    // In Workbench: tests currently in sample_collected, processing, or result_entered
     const query: any = {
       status: {
-        $in: [
-          "sample-collected",
-          "processing",
-          "result-entered",
-          "submitted-for-review",
-          "verified",
-        ],
+        $in: ["sample_collected", "processing", "result_entered", "in-progress"],
       },
     };
 
-    if (filter === "processing") {
-      query.status = { $in: ["sample-collected", "processing"] };
-    } else if (filter === "ready") {
-      query.status = "result-entered";
-    } else if (filter === "completed") {
-      query.status = { $in: ["submitted-for-review", "verified", "finalized"] };
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    if (bench && bench !== "all") {
+      query.department = { $regex: new RegExp(bench, "i") };
     }
 
     const tests = await LabReport.find(query)
       .populate({
         path: "patientId",
-        select: "firstName lastName mrn dateOfBirth gender bloodGroup phone allergies",
-        populate: { path: "userId", select: "name email avatar" },
+        select: "firstName lastName mrn dateOfBirth gender bloodGroup allergies",
+        populate: { path: "userId", select: "name avatar" },
       })
       .populate("doctorId", "name specialty department")
-      .populate("sampleId", "sampleId barcode containerType status storageLocation")
+      .populate("sampleDocId")
       .sort({ priority: -1, createdAt: -1 })
       .lean();
 
@@ -55,7 +51,7 @@ export async function GET(request: NextRequest) {
               (Date.now() - new Date(t.patientId.dateOfBirth).getTime()) /
                 (365.25 * 24 * 60 * 60 * 1000)
             )
-          : 34;
+          : 35;
 
         return {
           _id: t._id.toString(),
@@ -63,24 +59,32 @@ export async function GET(request: NextRequest) {
           department: t.department,
           priority: t.priority || "routine",
           status: t.status,
-          sampleCode: t.sampleId?.sampleId || t.sampleCode || "Pending",
-          barcode: t.sampleId?.barcode || "N/A",
-          sampleLocation: t.sampleId?.storageLocation || "Phlebotomy Bench",
+          sampleId: t.sampleId || "Awaiting Barcode",
+          sampleType: t.sampleType || "Blood",
+          tubeType: t.tubeType || "Lavender (EDTA)",
+          barcode: t.barcode,
+          analyzerBench: t.analyzerBench || "Standard Analytical Station",
+          requestedDate: t.createdAt || t.sampleCollectionDate,
+          sampleCollectedAt: t.sampleCollectedAt,
+          processingStartedAt: t.processingStartedAt,
+          resultEnteredAt: t.resultEnteredAt,
           resultsCount: t.results?.length || 0,
-          technicianNotes: t.technicianNotes || "",
-          submittedAt: t.submittedAt,
-          submittedBy: t.submittedBy,
-          createdAt: t.createdAt,
+          results: t.results || [],
+          summary: t.summary,
+          technicianNotes: t.technicianNotes,
           patient: {
             _id: t.patientId?._id?.toString(),
             name: patientName,
             mrn: t.patientId?.mrn || "MRN-N/A",
             age,
-            gender: t.patientId?.gender || "male",
+            gender: t.patientId?.gender || "unknown",
             bloodGroup: t.patientId?.bloodGroup || "O+",
+            allergies: t.patientId?.allergies || [],
+            avatar: t.patientId?.userId?.avatar,
           },
           doctor: {
-            name: t.doctorId?.name || "Attending Physician",
+            _id: t.doctorId?._id?.toString(),
+            name: t.doctorId?.name || "Dr. Anil Kumar",
             specialty: t.doctorId?.specialty || "Internal Medicine",
           },
         };
@@ -90,32 +94,18 @@ export async function GET(request: NextRequest) {
         const q = search.toLowerCase();
         return (
           t.testName.toLowerCase().includes(q) ||
-          t.sampleCode.toLowerCase().includes(q) ||
+          t.sampleId.toLowerCase().includes(q) ||
           t.patient.name.toLowerCase().includes(q) ||
           t.patient.mrn.toLowerCase().includes(q) ||
-          t.doctor.name.toLowerCase().includes(q)
+          t.department.toLowerCase().includes(q)
         );
       });
 
-    const counts = {
-      all: formatted.length,
-      processing: formatted.filter((t) =>
-        ["sample-collected", "processing"].includes(t.status)
-      ).length,
-      ready: formatted.filter((t) => t.status === "result-entered").length,
-      completed: formatted.filter((t) =>
-        ["submitted-for-review", "verified", "finalized"].includes(t.status)
-      ).length,
-    };
-
-    return NextResponse.json({
-      tests: formatted,
-      counts,
-    });
+    return NextResponse.json({ tests: formatted });
   } catch (error: any) {
-    console.error("Lab tests GET error:", error);
+    console.error("Lab Tests Workbench GET error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to load laboratory test queue" },
+      { error: error.message || "Failed to load laboratory tests workbench" },
       { status: 500 }
     );
   }

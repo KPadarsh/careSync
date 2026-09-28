@@ -3,95 +3,75 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  IconSearch,
-  IconRequests,
-  IconFlask,
-  IconAlertTriangle,
-  IconClock,
-  IconChevronRight,
-  IconRefresh,
-  IconTestTube,
+  RequestsIcon,
+  SearchIcon,
+  FilterIcon,
+  RefreshIcon,
+  ChevronRightIcon,
+  AlertTriangleIcon,
 } from "./LabIcons";
 
-interface LabRequestItem {
-  id: string;
-  reportNumber: string;
-  patient: {
-    id: string;
-    name: string;
-    age: number;
-    gender: string;
-    phone?: string;
-  };
-  testType: string;
-  testCategory: string;
-  doctor: {
-    id: string;
-    name: string;
-    department?: string;
-  };
-  priority: "stat" | "urgent" | "routine";
-  status: string;
-  requestedDate: string;
-  sampleCode?: string;
-  clinicalReason?: string;
-}
-
-export function RequestsView() {
-  const [requests, setRequests] = useState<LabRequestItem[]>([]);
+export const RequestsView: React.FC = () => {
+  const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
-  const loadRequests = async () => {
-    setLoading(true);
+  const fetchRequests = async () => {
     try {
+      setRefreshing(true);
       const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (priorityFilter !== "all") params.set("priority", priorityFilter);
-      if (search) params.set("search", search);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (priorityFilter !== "all") params.append("priority", priorityFilter);
+      if (search.trim()) params.append("search", search.trim());
 
       const res = await fetch(`/api/lab/requests?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data.requests || []);
+      if (!res.ok) {
+        throw new Error("Failed to load doctor lab requests");
       }
-    } catch (err) {
-      console.error("Failed to load lab requests:", err);
+      const data = await res.json();
+      setRequests(data.requests || []);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to load requests");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadRequests();
+    fetchRequests();
   }, [statusFilter, priorityFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadRequests();
+    fetchRequests();
   };
 
   const getPriorityBadge = (priority: string) => {
-    switch (priority) {
+    switch (priority?.toLowerCase()) {
       case "stat":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-            STAT Priority
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+            STAT Order
           </span>
         );
       case "urgent":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold uppercase tracking-wider">
             Urgent
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-semibold uppercase tracking-wider">
             Routine
           </span>
         );
@@ -99,112 +79,135 @@ export function RequestsView() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "requested":
+      case "pending":
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold">
             Requested
           </span>
         );
-      case "sample-pending":
+      case "sample_pending":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
             Sample Pending
           </span>
         );
-      case "sample-collected":
+      case "sample_collected":
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold">
             Sample Collected
           </span>
         );
       case "processing":
+      case "in-progress":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold">
             Processing
           </span>
         );
-      case "result-entered":
+      case "result_entered":
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-semibold">
             Result Entered
           </span>
         );
-      case "submitted-for-review":
+      case "submitted_for_review":
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-            Awaiting Pathologist
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+            Submitted for Review
           </span>
         );
       case "verified":
+      case "finalized":
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-            Verified
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 text-xs font-semibold">
+            Verified / Finalized
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
             {status}
           </span>
         );
     }
   };
 
+  const getActionLabel = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "requested":
+      case "pending":
+      case "sample_pending":
+        return "Collect Sample";
+      case "sample_collected":
+        return "Start Process";
+      case "processing":
+      case "in-progress":
+        return "Enter Results";
+      case "result_entered":
+        return "Review & Submit";
+      default:
+        return "View Details";
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex flex-col gap-6">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Lab Requests</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-[#00355f]">
+              Doctor-Created Lab Requests
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold">
+              {requests.length} Orders
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">
-            Doctor-ordered laboratory investigations awaiting collection, sample registration, and analyzer processing.
+            Real clinical test requisitions authored by attending doctors during consultations.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => loadRequests()}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            type="button"
+            onClick={fetchRequests}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
           >
-            <IconRefresh className="w-4 h-4 text-slate-500" />
-            Refresh
+            <RefreshIcon
+              size={14}
+              className={refreshing ? "animate-spin text-teal-600" : "text-slate-500"}
+            />
+            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row gap-3 justify-between">
-          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md relative">
-            <IconSearch className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by patient, test name, ID, or doctor..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#004ac6] focus:border-transparent transition-all"
-            />
-          </form>
-
-          {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-500 mr-1">Status:</span>
+      {/* FILTER TABS & SEARCH BAR */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          {/* Status Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             {[
-              { id: "all", label: "All" },
+              { id: "all", label: "All Requests" },
               { id: "requested", label: "Requested" },
-              { id: "sample-pending", label: "Sample Pending" },
-              { id: "sample-collected", label: "Sample Collected" },
+              { id: "sample_pending", label: "Sample Pending" },
+              { id: "sample_collected", label: "Sample Collected" },
               { id: "processing", label: "Processing" },
+              { id: "result_entered", label: "Result Entered" },
+              { id: "submitted_for_review", label: "Submitted" },
+              { id: "completed", label: "Verified" },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                   statusFilter === tab.id
-                    ? "bg-[#004ac6] text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    ? "bg-[#00355f] text-white shadow-xs"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {tab.label}
@@ -212,12 +215,13 @@ export function RequestsView() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
-            <span className="text-xs font-medium text-slate-500">Priority:</span>
+          {/* Priority Quick Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">Priority:</span>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#004ac6]"
+              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
             >
               <option value="all">All Priorities</option>
               <option value="stat">STAT Only</option>
@@ -226,136 +230,153 @@ export function RequestsView() {
             </select>
           </div>
         </div>
+
+        {/* Search bar */}
+        <form onSubmit={handleSearchSubmit} className="relative">
+          <SearchIcon
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            type="text"
+            placeholder="Search by patient name, MRN, doctor, or test name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-24 py-2 text-xs bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0f4c81] focus:bg-white transition-all"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#00355f] text-white rounded-md text-xs font-semibold hover:bg-[#0f4c81] transition-colors"
+          >
+            Search
+          </button>
+        </form>
       </div>
 
-      {/* Requests Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th className="py-3.5 px-4">Patient</th>
-                <th className="py-3.5 px-4">Requested Test</th>
-                <th className="py-3.5 px-4">Ordering Doctor</th>
-                <th className="py-3.5 px-4">Priority</th>
-                <th className="py-3.5 px-4">Requested Date</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-[#004ac6] border-t-transparent rounded-full animate-spin" />
-                      Loading lab requests...
-                    </div>
-                  </td>
+      {/* REQUESTS DATA TABLE (Exact Stitch requirements) */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : error ? (
+          <div className="p-8 text-center text-rose-600 text-sm">{error}</div>
+        ) : requests.length === 0 ? (
+          <div className="text-center py-16 px-4">
+            <RequestsIcon size={36} className="text-slate-300 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-slate-700">No lab requests found</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Adjust your filters or search keywords to view other requisitions.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <th className="py-3.5 px-4">Patient</th>
+                  <th className="py-3.5 px-4">Requested Tests</th>
+                  <th className="py-3.5 px-4">Doctor</th>
+                  <th className="py-3.5 px-4">Priority</th>
+                  <th className="py-3.5 px-4">Requested Date</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Action</th>
                 </tr>
-              ) : requests.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                        <IconFlask className="w-6 h-6" />
-                      </div>
-                      <p className="font-medium text-slate-700">No laboratory requests found</p>
-                      <p className="text-xs text-slate-400 max-w-sm">
-                        No requests match your current filters. Clear filters or wait for new doctor orders to arrive.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/80 transition-colors">
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {requests.map((r) => (
+                  <tr
+                    key={r._id}
+                    className="hover:bg-slate-50/80 transition-colors group"
+                  >
                     {/* Patient */}
                     <td className="py-3.5 px-4">
-                      <div>
-                        <div className="font-semibold text-slate-900">{req.patient?.name || "Unknown"}</div>
-                        <div className="text-xs text-slate-500">
-                          {req.patient?.age}y • {req.patient?.gender} • ID: {req.patient?.id?.slice(-6).toUpperCase()}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#0f4c81]/10 text-[#00355f] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {r.patient.bloodGroup}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-slate-900 text-xs group-hover:text-[#00355f]">
+                            {r.patient.name}
+                          </span>
+                          <span className="text-[11px] text-slate-400">
+                            {r.patient.mrn} • {r.patient.age}y • {r.patient.gender}
+                          </span>
                         </div>
                       </div>
                     </td>
 
-                    {/* Test */}
+                    {/* Requested Tests */}
                     <td className="py-3.5 px-4">
-                      <div>
-                        <div className="font-medium text-slate-900 flex items-center gap-1.5">
-                          <IconFlask className="w-4 h-4 text-[#004ac6]" />
-                          {req.testType}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {req.testCategory || "General Pathology"}
-                          {req.sampleCode && (
-                            <span className="ml-1.5 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[11px]">
-                              {req.sampleCode}
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-900 text-xs">
+                          {r.testName}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {r.department}
+                        </span>
+                        {r.sampleId && (
+                          <span className="text-[10px] text-teal-700 font-mono mt-0.5">
+                            ID: {r.sampleId}
+                          </span>
+                        )}
                       </div>
                     </td>
 
                     {/* Doctor */}
                     <td className="py-3.5 px-4">
-                      <div>
-                        <div className="font-medium text-slate-800">{req.doctor?.name || "Dr. Staff"}</div>
-                        <div className="text-xs text-slate-500">{req.doctor?.department || "General Medicine"}</div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-800 text-xs">
+                          {r.doctor.name}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          {r.doctor.specialty}
+                        </span>
                       </div>
                     </td>
 
                     {/* Priority */}
-                    <td className="py-3.5 px-4">{getPriorityBadge(req.priority)}</td>
+                    <td className="py-3.5 px-4">
+                      {getPriorityBadge(r.priority)}
+                    </td>
 
                     {/* Requested Date */}
-                    <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
-                      {req.requestedDate ? new Date(req.requestedDate).toLocaleDateString() : "Today"}
-                      <div className="text-[11px] text-slate-400">
-                        {req.requestedDate ? new Date(req.requestedDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                      </div>
+                    <td className="py-3.5 px-4 text-xs text-slate-600">
+                      {new Date(r.requestedDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      <span className="block text-[10px] text-slate-400">
+                        {new Date(r.requestedDate).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </td>
 
                     {/* Status */}
-                    <td className="py-3.5 px-4">{getStatusBadge(req.status)}</td>
+                    <td className="py-3.5 px-4">
+                      {getStatusBadge(r.status)}
+                    </td>
 
                     {/* Action */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-right">
                       <Link
-                        href={`/lab/requests/${req.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#004ac6] hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
+                        href={`/lab/requests/${r._id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-2xs transition-all"
                       >
-                        {req.status === "requested" || req.status === "sample-pending"
-                          ? "Collect Sample"
-                          : req.status === "sample-collected"
-                          ? "Start Processing"
-                          : "View Details"}
-                        <IconChevronRight className="w-3.5 h-3.5" />
+                        <span>{getActionLabel(r.status)}</span>
+                        <ChevronRightIcon size={13} />
                       </Link>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Table Footer */}
-        <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
-          <div>
-            Showing <span className="font-semibold text-slate-700">{requests.length}</span> active requests
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500" /> STAT Orders prioritized
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500" /> Auto-sync enabled
-            </span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
-}
+};

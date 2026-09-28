@@ -2,209 +2,186 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  IconUser,
-  IconLock,
-  IconShield,
-  IconCheckCircle,
-  IconFlask,
-  IconClock,
+  ProfileIcon,
+  CheckIcon,
+  AlertTriangleIcon,
 } from "./LabIcons";
 
-export function ProfileView() {
+export const ProfileView: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Form states
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [station, setStation] = useState("Diagnostic Station A-4");
-  const [emergencyContact, setEmergencyContact] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Password state
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
-  const [savingPassword, setSavingPassword] = useState(false);
-
-  const loadProfile = async () => {
-    setLoading(true);
+  const fetchProfile = async () => {
     try {
+      setLoading(true);
       const res = await fetch("/api/lab/profile");
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data.technician);
-        setPhone(data.technician?.phone || "");
-        setStation(data.technician?.station || "Diagnostic Station A-4");
-        setEmergencyContact(data.technician?.emergencyContact || "");
+      if (!res.ok) {
+        throw new Error("Failed to load profile");
       }
-    } catch (err) {
-      console.error(err);
+      const data = await res.json();
+      setProfile(data.user);
+      setName(data.user.name || "");
+      setPhone(data.user.phone || "");
+    } catch (err: any) {
+      setError(err.message || "Failed to load profile");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProfile();
+    fetchProfile();
   }, []);
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setSuccessMsg(null);
     try {
+      setSaving(true);
+      setMessage(null);
       const res = await fetch("/api/lab/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, station, emergencyContact }),
+        body: JSON.stringify({ name, phone }),
       });
-      if (res.ok) {
-        setSuccessMsg("Technician profile updated successfully.");
-        await loadProfile();
-      } else {
-        alert("Failed to update profile");
+      if (!res.ok) {
+        throw new Error("Failed to update profile");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating profile");
+      setMessage("Profile updated successfully.");
+      await fetchProfile();
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("New passwords do not match.");
-      return;
-    }
-    if (newPassword.length < 6) {
-      alert("Password must be at least 6 characters.");
-      return;
-    }
-
-    setSavingPassword(true);
-    setPasswordMsg(null);
-    try {
-      const res = await fetch("/api/lab/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      if (res.ok) {
-        setPasswordMsg("Password changed successfully.");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to update password");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error changing password");
-    } finally {
-      setSavingPassword(false);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <div className="w-8 h-8 border-3 border-[#004ac6] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Loading profile...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Technician Profile</h1>
+    <div className="flex flex-col gap-6 max-w-4xl">
+      {/* HEADER SECTION */}
+      <div className="pb-2 border-b border-slate-200/80">
+        <h1 className="text-2xl font-bold tracking-tight text-[#00355f]">
+          Laboratory Technologist Profile
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Manage your credentials, laboratory station assignment, and shift parameters.
+          Credentials, workstation certification, and departmental station assignment.
         </p>
       </div>
 
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm font-medium animate-fade-in shadow-sm">
-          <IconCheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>{successMsg}</span>
+      {message && (
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold flex items-center gap-2">
+          <CheckIcon size={16} className="text-teal-600" />
+          <span>{message}</span>
         </div>
       )}
 
-      {/* Main Profile Info Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#004ac6] to-blue-500 text-white flex items-center justify-center font-bold text-xl shadow-md">
-              {profile?.name?.slice(0, 2).toUpperCase() || "AK"}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-900">{profile?.name || "Arun Kumar"}</h2>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#004ac6] border border-blue-200">
-                  {profile?.role || "Lab Technician"}
-                </span>
-              </div>
-              <p className="text-sm text-slate-500 mt-0.5">{profile?.email || "arun.lab@caresync.com"}</p>
-            </div>
-          </div>
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+          <AlertTriangleIcon size={16} className="text-rose-600" />
+          <span>{error}</span>
+        </div>
+      )}
 
-          <div className="text-right">
-            <span className="text-xs text-slate-400">Assigned Station</span>
-            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5 justify-end">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              {profile?.station || "Diagnostic Station A-4"}
+      {/* CREDENTIALS CARD */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 flex flex-col gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-[#006a68] text-white flex items-center justify-center font-bold text-xl ring-4 ring-teal-50">
+            VM
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[#00355f]">{profile?.name}</h2>
+            <span className="text-xs text-slate-500 font-medium block">
+              {profile?.certification}
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-[10px] font-bold border border-teal-200">
+                ACTIVE SHIFT
+              </span>
+              <span className="text-xs text-slate-400">
+                License: {profile?.licenseNumber}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Edit Details Form */}
-        <form onSubmit={handleUpdateProfile} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* WORKSTATION STATS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100 text-xs">
+          <div className="p-3 bg-slate-50 rounded-lg">
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+              Assigned Lab
+            </span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">
+              {profile?.station}
+            </span>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-lg">
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+              Department
+            </span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">
+              {profile?.department}
+            </span>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-lg">
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">
+              Working Shift
+            </span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">
+              {profile?.shift}
+            </span>
+          </div>
+        </div>
+
+        {/* EDIT PROFILE FORM */}
+        <form onSubmit={handleSave} className="flex flex-col gap-4 pt-4 border-t border-slate-100">
+          <h3 className="font-bold text-sm text-[#00355f]">Personal &amp; Contact Details</h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Station / Bench</label>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Full Name
+              </label>
               <input
                 type="text"
-                value={station}
-                onChange={(e) => setStation(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-2 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Phone Number
+              </label>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
+                className="w-full p-2 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Emergency Contact</label>
+            <div className="sm:col-span-2">
+              <label className="font-semibold text-slate-700 block mb-1">
+                Email Address (System Login)
+              </label>
               <input
-                type="text"
-                value={emergencyContact}
-                onChange={(e) => setEmergencyContact(e.target.value)}
-                placeholder="Name & Contact (e.g. Priya - +91 98765 11111)"
-                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Active Shift</label>
-              <input
-                type="text"
+                type="email"
                 disabled
-                value="Morning Shift (07:00 - 15:30 IST)"
-                className="w-full px-3 py-2 text-sm bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed"
+                value={profile?.email || ""}
+                className="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed"
               />
             </div>
           </div>
@@ -213,73 +190,13 @@ export function ProfileView() {
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 text-sm font-semibold text-white bg-[#004ac6] hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+              className="px-5 py-2 bg-[#00355f] hover:bg-[#0f4c81] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
             >
-              {saving ? "Saving..." : "Save Profile Details"}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Security & Password Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-          <IconLock className="w-5 h-5 text-slate-500" />
-          <h2 className="text-base font-bold text-slate-900">Security & Password</h2>
-        </div>
-
-        {passwordMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium">
-            {passwordMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={savingPassword}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {savingPassword ? "Updating..." : "Update Password"}
+              {saving ? "Saving Changes..." : "Save Profile Details"}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
+};

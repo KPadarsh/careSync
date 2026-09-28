@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { LabShell, SampleDetailView } from "@/components/portals/lab";
 
 export const metadata: Metadata = {
-  title: "Specimen File & Chain of Custody | CareSync",
-  description: "View specimen parameters, barcode token, storage location, and chain of custody audit trail.",
+  title: "Sample Specimen Specification | CareSync",
+  description:
+    "Specimen chain of custody, thermal barcode print preview, container tube specs, and storage rack management.",
 };
 
 export default async function LabSampleDetailPage({

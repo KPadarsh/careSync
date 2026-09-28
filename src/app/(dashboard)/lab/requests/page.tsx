@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { LabShell, RequestsView } from "@/components/portals/lab";
 
 export const metadata: Metadata = {
-  title: "Lab Requests | CareSync",
-  description: "Doctor-ordered laboratory investigations awaiting collection and processing.",
+  title: "Doctor Lab Requests | CareSync Diagnostic Portal",
+  description:
+    "View doctor-created lab requests, clinical indications, priority triage, and collect samples.",
 };
 
 export default function LabRequestsPage() {

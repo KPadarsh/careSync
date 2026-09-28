@@ -2,18 +2,30 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface ILabSample extends Document {
   sampleId: string; // e.g. SMP-2026-00125
-  barcode: string; // Secure token / identifier (e.g. BC-9812-00125) without sensitive PHI
-  patientId: Types.ObjectId;
-  labReportId?: Types.ObjectId;
+  labReportId: Types.ObjectId; // Ref: LabReport
+  patientId: Types.ObjectId; // Ref: Patient
+  doctorId?: Types.ObjectId; // Ref: Doctor
   testName: string;
-  sampleType: "Venous Blood" | "Serum" | "Plasma" | "Urine" | "Capillary Blood" | "Swab" | "Sputum" | "Other";
-  containerType: string; // e.g. "EDTA Tube (Purple)", "SST Gold", "Sodium Citrate (Blue)", "Sterile Cup"
-  collectionVolume: string; // e.g. "4 mL", "10 mL"
-  collectedBy: string; // Technician Name
+  department: string;
+  specimenType: string; // e.g. Venous Blood, Serum, Urine, Plasma, CSF, Sputum
+  tubeType: string; // e.g. Lavender Top (EDTA), Gold Top (SST), Light Blue (Sodium Citrate)
+  barcode: string; // e.g. CS-SMP-2026-00125-T792 (Secure token, does NOT encode patient PII)
+  barcodeToken: string; // Secure token for fast scanner lookup
+  collectionSite: string; // e.g. Phlebotomy Station 2
   collectedAt: Date;
-  status: "pending" | "collected" | "in-transit" | "processing" | "stored" | "rejected";
-  storageLocation: string; // e.g. "Rack B-4, Cold Storage (-20°C)"
-  notes?: string;
+  collectedBy: string; // e.g. Vikram Malhotra, MLT
+  storageLocation: string; // e.g. Rack C-04 / Shelf 2 (Cold 4°C)
+  volume?: string; // e.g. 4.0 mL
+  status:
+    | "pending"
+    | "collected"
+    | "processing"
+    | "analyzed"
+    | "stored"
+    | "disposed"
+    | "rejected";
+  rejectionReason?: string;
+  technicianNotes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,11 +39,10 @@ const LabSampleSchema = new Schema<ILabSample>(
       trim: true,
       index: true,
     },
-    barcode: {
-      type: String,
+    labReportId: {
+      type: Schema.Types.ObjectId,
+      ref: "LabReport",
       required: true,
-      unique: true,
-      trim: true,
       index: true,
     },
     patientId: {
@@ -40,64 +51,75 @@ const LabSampleSchema = new Schema<ILabSample>(
       required: true,
       index: true,
     },
-    labReportId: {
+    doctorId: {
       type: Schema.Types.ObjectId,
-      ref: "LabReport",
+      ref: "Doctor",
       index: true,
     },
-    testName: {
+    testName: { type: String, required: true, trim: true },
+    department: {
+      type: String,
+      default: "Pathology / Clinical Chemistry",
+      trim: true,
+    },
+    specimenType: {
+      type: String,
+      required: true,
+      default: "Venous Blood",
+      trim: true,
+    },
+    tubeType: {
+      type: String,
+      required: true,
+      default: "Lavender Top (EDTA)",
+      trim: true,
+    },
+    barcode: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      index: true,
+    },
+    barcodeToken: {
       type: String,
       required: true,
       trim: true,
+      index: true,
     },
-    sampleType: {
+    collectionSite: {
       type: String,
-      enum: [
-        "Venous Blood",
-        "Serum",
-        "Plasma",
-        "Urine",
-        "Capillary Blood",
-        "Swab",
-        "Sputum",
-        "Other",
-      ],
-      default: "Venous Blood",
-    },
-    containerType: {
-      type: String,
-      default: "EDTA Tube (Purple Top)",
+      default: "Central Phlebotomy Station 2",
       trim: true,
     },
-    collectionVolume: {
-      type: String,
-      default: "4 mL",
-      trim: true,
-    },
+    collectedAt: { type: Date, default: Date.now },
     collectedBy: {
       type: String,
-      required: true,
+      default: "Vikram Malhotra, MLT",
       trim: true,
-    },
-    collectedAt: {
-      type: Date,
-      default: Date.now,
-    },
-    status: {
-      type: String,
-      enum: ["pending", "collected", "in-transit", "processing", "stored", "rejected"],
-      default: "collected",
-      index: true,
     },
     storageLocation: {
       type: String,
-      default: "Rack A-1, Lab Refrigerator 4°C",
+      default: "Rack A-01 / Ambient Storage",
       trim: true,
     },
-    notes: {
+    volume: { type: String, default: "4.0 mL" },
+    status: {
       type: String,
-      default: "",
+      enum: [
+        "pending",
+        "collected",
+        "processing",
+        "analyzed",
+        "stored",
+        "disposed",
+        "rejected",
+      ],
+      default: "collected",
+      index: true,
     },
+    rejectionReason: { type: String },
+    technicianNotes: { type: String },
   },
   {
     timestamps: true,

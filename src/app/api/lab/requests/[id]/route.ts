@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireLabTechSession } from "@/lib/auth";
-import { LabReport, LabSample, Patient, Doctor } from "@/models";
-import mongoose from "mongoose";
+import { requireLabSession } from "@/lib/auth";
+import { LabReport, LabSample, Patient, Doctor, Notification } from "@/models";
 
 export async function GET(
   request: NextRequest,
@@ -10,179 +9,389 @@ export async function GET(
 ) {
   try {
     await connectToDatabase();
-    await requireLabTechSession();
+    await requireLabSession();
     const { id } = await context.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid request ID" }, { status: 400 });
-    }
 
     const report = await LabReport.findById(id)
       .populate({
         path: "patientId",
-        select: "firstName lastName mrn dateOfBirth gender bloodGroup phone allergies emergencyContact",
-        populate: { path: "userId", select: "name email avatar phone" },
+        select:
+          "firstName lastName mrn dateOfBirth gender bloodGroup phone address emergencyContact insurance allergies",
+        populate: { path: "userId", select: "name email phone avatar" },
       })
-      .populate("doctorId", "name specialty department roomNumber")
-      .populate("sampleId")
+      .populate(
+        "doctorId",
+        "name specialty department qualification roomNumber availableDays"
+      )
+      .populate("sampleDocId")
       .lean();
 
     if (!report) {
-      return NextResponse.json({ error: "Lab request not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab requisition not found" },
+        { status: 404 }
+      );
     }
 
     const patientName =
-      (report.patientId as any)?.userId?.name ||
-      `${(report.patientId as any)?.firstName || ""} ${(report.patientId as any)?.lastName || ""}`.trim() ||
+      (report as any).patientId?.userId?.name ||
+      `${(report as any).patientId?.firstName || ""} ${(report as any).patientId?.lastName || ""}`.trim() ||
       "Patient";
 
-    const age = (report.patientId as any)?.dateOfBirth
+    const age = (report as any).patientId?.dateOfBirth
       ? Math.floor(
-          (Date.now() - new Date((report.patientId as any).dateOfBirth).getTime()) /
+          (Date.now() - new Date((report as any).patientId.dateOfBirth).getTime()) /
             (365.25 * 24 * 60 * 60 * 1000)
         )
-      : 34;
+      : 35;
 
-    return NextResponse.json({
-      request: {
-        _id: report._id.toString(),
-        testName: report.testName,
-        department: report.department,
-        priority: report.priority || "routine",
-        status: report.status,
-        clinicalReason: report.clinicalReason || "Diagnostic evaluation",
-        instructions: report.instructions || "Standard diagnostic protocol",
-        sampleCollectionDate: report.sampleCollectionDate,
-        summary: report.summary,
-        technicianNotes: report.technicianNotes || "",
-        createdAt: report.createdAt,
-        patient: {
-          _id: (report.patientId as any)?._id?.toString(),
-          name: patientName,
-          mrn: (report.patientId as any)?.mrn || "MRN-N/A",
-          age,
-          gender: (report.patientId as any)?.gender || "male",
-          bloodGroup: (report.patientId as any)?.bloodGroup || "O+",
-          phone: (report.patientId as any)?.phone || "N/A",
-          allergies: (report.patientId as any)?.allergies || [],
-        },
-        doctor: {
-          name: (report.doctorId as any)?.name || "Attending Physician",
-          specialty: (report.doctorId as any)?.specialty || "General Medicine",
-          department: (report.doctorId as any)?.department || "Cardiology",
-          room: (report.doctorId as any)?.roomNumber || "Room 302",
-        },
-        sample: report.sampleId
-          ? {
-              _id: (report.sampleId as any)._id.toString(),
-              sampleId: (report.sampleId as any).sampleId,
-              barcode: (report.sampleId as any).barcode,
-              sampleType: (report.sampleId as any).sampleType,
-              containerType: (report.sampleId as any).containerType,
-              collectionVolume: (report.sampleId as any).collectionVolume,
-              collectedBy: (report.sampleId as any).collectedBy,
-              collectedAt: (report.sampleId as any).collectedAt,
-              status: (report.sampleId as any).status,
-              storageLocation: (report.sampleId as any).storageLocation,
-              notes: (report.sampleId as any).notes,
-            }
-          : null,
+    // Check if sample exists for this report
+    let sample = (report as any).sampleDocId;
+    if (!sample && report.sampleId) {
+      sample = await LabSample.findOne({ sampleId: report.sampleId }).lean();
+    }
+
+    const formatted = {
+      _id: report._id.toString(),
+      testName: report.testName,
+      department: report.department,
+      priority: (report as any).priority || "routine",
+      status: report.status,
+      sampleId: (report as any).sampleId,
+      sampleType: (report as any).sampleType,
+      tubeType: (report as any).tubeType,
+      barcode: (report as any).barcode,
+      requestedDate: (report as any).createdAt || report.sampleCollectionDate,
+      sampleCollectedAt: (report as any).sampleCollectedAt,
+      sampleCollectedBy: (report as any).sampleCollectedBy,
+      processingStartedAt: (report as any).processingStartedAt,
+      processingBy: (report as any).processingBy,
+      analyzerBench: (report as any).analyzerBench,
+      resultEnteredAt: (report as any).resultEnteredAt,
+      submittedForReviewAt: (report as any).submittedForReviewAt,
+      submittedBy: (report as any).submittedBy,
+      verifiedDate: report.verifiedDate,
+      verifiedBy: report.verifiedBy,
+      summary: report.summary,
+      technicianNotes: (report as any).technicianNotes,
+      pathologistNotes: (report as any).pathologistNotes,
+      results: report.results || [],
+      fileUrl: report.fileUrl,
+      sample: sample
+        ? {
+            _id: sample._id.toString(),
+            sampleId: sample.sampleId,
+            specimenType: sample.specimenType,
+            tubeType: sample.tubeType,
+            barcode: sample.barcode,
+            barcodeToken: sample.barcodeToken,
+            collectionSite: sample.collectionSite,
+            collectedAt: sample.collectedAt,
+            collectedBy: sample.collectedBy,
+            storageLocation: sample.storageLocation,
+            volume: sample.volume,
+            status: sample.status,
+            technicianNotes: sample.technicianNotes,
+          }
+        : null,
+      patient: {
+        _id: (report as any).patientId?._id?.toString(),
+        name: patientName,
+        mrn: (report as any).patientId?.mrn || "MRN-N/A",
+        age,
+        gender: (report as any).patientId?.gender || "unknown",
+        bloodGroup: (report as any).patientId?.bloodGroup || "O+",
+        allergies: (report as any).patientId?.allergies || [],
+        phone:
+          (report as any).patientId?.phone ||
+          (report as any).patientId?.userId?.phone ||
+          "N/A",
+        avatar: (report as any).patientId?.userId?.avatar,
+        address: (report as any).patientId?.address,
+        emergencyContact: (report as any).patientId?.emergencyContact,
+        insurance: (report as any).patientId?.insurance,
       },
-    });
+      doctor: {
+        _id: (report as any).doctorId?._id?.toString(),
+        name: (report as any).doctorId?.name || "Dr. Anil Kumar",
+        specialty: (report as any).doctorId?.specialty || "Internal Medicine",
+        department: (report as any).doctorId?.department || "Cardiology",
+        roomNumber: (report as any).doctorId?.roomNumber || "Consultation 302",
+      },
+    };
+
+    return NextResponse.json({ request: formatted });
   } catch (error: any) {
-    console.error("Lab request GET error:", error);
+    console.error("Lab Request Detail GET error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to load lab request detail" },
+      { error: error.message || "Failed to load request detail" },
       { status: 500 }
     );
   }
 }
 
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
-    const session = await requireLabTechSession();
+    const session = await requireLabSession();
+    const technicianName = session.user.name || "Vikram Malhotra, MLT";
     const { id } = await context.params;
+    const body = await request.json();
+    const { action } = body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: "Invalid request ID" }, { status: 400 });
+    // Strict Permissions: Lab Technician cannot verify, approve, or finalize
+    if (
+      action === "verify" ||
+      action === "approve" ||
+      action === "finalize" ||
+      body.status === "verified" ||
+      body.status === "finalized"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Permission Denied: Lab Technicians cannot verify or finalize pathology reports. Result verification is strictly restricted to Board Certified Pathologists (Dr. Sunita Patil, MD).",
+        },
+        { status: 403 }
+      );
     }
 
     const report = await LabReport.findById(id);
     if (!report) {
-      return NextResponse.json({ error: "Lab request not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab requisition not found" },
+        { status: 404 }
+      );
     }
 
-    const body = await request.json();
-    const { action, sampleType, containerType, collectionVolume, storageLocation, notes } = body;
+    // 1. ACTION: collect_sample / record_sample
+    if (action === "collect_sample" || action === "record_sample") {
+      const {
+        specimenType = "Venous Blood",
+        tubeType = "Lavender Top (EDTA)",
+        collectionSite = "Central Phlebotomy Station 2",
+        storageLocation = "Rack A-02 / Ambient",
+        volume = "4.0 mL",
+        notes,
+      } = body;
 
-    if (action === "collect-sample") {
-      // Generate sample ID: SMP-2026-XXXXX
-      const randomNum = Math.floor(10000 + Math.random() * 90000);
-      const sampleId = `SMP-2026-${randomNum}`;
-      // Secure Barcode identifier without encoding PHI
-      const barcode = `BC-9812-${randomNum}`;
+      // Generate standardized sample identifier SMP-2026-XXXXX
+      let sampleId = body.sampleId;
+      if (!sampleId) {
+        const count = await LabSample.countDocuments();
+        const seq = (count + 125).toString().padStart(5, "0");
+        sampleId = `SMP-2026-${seq}`;
+      }
 
-      const sample = await LabSample.create({
-        sampleId,
-        barcode,
-        patientId: report.patientId,
-        labReportId: report._id,
-        testName: report.testName,
-        sampleType: sampleType || "Venous Blood",
-        containerType: containerType || "EDTA Tube (Purple Top)",
-        collectionVolume: collectionVolume || "4 mL",
-        collectedBy: session.user.name,
-        collectedAt: new Date(),
-        status: "collected",
-        storageLocation: storageLocation || "Rack A-1, Main Refrigerator (4°C)",
-        notes: notes || "Sample drawn via venipuncture in Phlebotomy Room.",
-      });
+      // Generate secure non-PII barcode token (e.g. CS-SMP-2026-00125-TK78)
+      // Never encode sensitive patient information in barcode
+      const randomToken = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const barcode = `CS-${sampleId}-${randomToken}`;
+      const barcodeToken = `${sampleId}-${randomToken}`;
 
-      report.sampleId = sample._id as any;
-      report.sampleCode = sample.sampleId;
-      report.status = "sample-collected";
-      report.sampleCollectionDate = new Date();
-      report.summary = `Sample ${sample.sampleId} collected by ${session.user.name}. Storage: ${sample.storageLocation}.`;
+      // Create or update LabSample document
+      let sample = await LabSample.findOne({ labReportId: report._id });
+      if (sample) {
+        sample.specimenType = specimenType;
+        sample.tubeType = tubeType;
+        sample.collectionSite = collectionSite;
+        sample.storageLocation = storageLocation;
+        sample.volume = volume;
+        sample.status = "collected";
+        sample.collectedAt = new Date();
+        sample.collectedBy = technicianName;
+        if (notes) sample.technicianNotes = notes;
+        await sample.save();
+      } else {
+        sample = await LabSample.create({
+          sampleId,
+          labReportId: report._id,
+          patientId: report.patientId,
+          doctorId: report.doctorId,
+          testName: report.testName,
+          department: report.department,
+          specimenType,
+          tubeType,
+          barcode,
+          barcodeToken,
+          collectionSite,
+          collectedAt: new Date(),
+          collectedBy: technicianName,
+          storageLocation,
+          volume,
+          status: "collected",
+          technicianNotes: notes || `Sample collected by ${technicianName}`,
+        });
+      }
+
+      // Update report status to sample_collected
+      report.status = "sample_collected";
+      (report as any).sampleId = sample.sampleId;
+      (report as any).sampleDocId = sample._id as any;
+      (report as any).sampleType = specimenType;
+      (report as any).tubeType = tubeType;
+      (report as any).barcode = barcode;
+      (report as any).sampleCollectedAt = new Date();
+      (report as any).sampleCollectedBy = technicianName;
+      if (notes) (report as any).technicianNotes = notes;
       await report.save();
 
       return NextResponse.json({
         success: true,
-        message: `Sample ${sample.sampleId} successfully collected and registered.`,
-        sample: {
-          sampleId: sample.sampleId,
-          barcode: sample.barcode,
-          status: sample.status,
-          storageLocation: sample.storageLocation,
-        },
+        message: `Sample ${sample.sampleId} recorded successfully.`,
         status: report.status,
+        sample: sample.toObject(),
+        report: report.toObject(),
       });
     }
 
-    if (action === "start-processing") {
+    // 2. ACTION: begin_processing
+    if (action === "begin_processing" || action === "start_processing") {
+      const { analyzerBench = "Roche Cobas 6000 Chemistry Analyzer", notes } = body;
+
       report.status = "processing";
-      report.summary = `Mounted on analyzer by ${session.user.name}. Testing run initiated.`;
+      (report as any).processingStartedAt = new Date();
+      (report as any).processingBy = technicianName;
+      (report as any).analyzerBench = analyzerBench;
+      if (notes) (report as any).technicianNotes = notes;
       await report.save();
 
-      if (report.sampleId) {
-        await LabSample.findByIdAndUpdate(report.sampleId, { status: "processing" });
+      // Update sample status
+      await LabSample.updateOne(
+        { labReportId: report._id },
+        { status: "processing" }
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: `Analysis begun on bench ${analyzerBench}.`,
+        status: report.status,
+        report: report.toObject(),
+      });
+    }
+
+    // 3. ACTION: enter_result / save_results
+    if (action === "enter_result" || action === "save_results") {
+      const { results, technicianNotes } = body;
+
+      if (results && Array.isArray(results)) {
+        report.results = results.map((r: any) => ({
+          parameter: r.parameter?.trim() || "Parameter",
+          value: r.value?.trim() || "",
+          unit: r.unit?.trim() || "",
+          referenceRange: r.referenceRange?.trim() || "",
+          flag: ["normal", "high", "low", "critical"].includes(r.flag)
+            ? r.flag
+            : "normal",
+        }));
+      }
+
+      report.status = "result_entered";
+      (report as any).resultEnteredAt = new Date();
+      if (technicianNotes) (report as any).technicianNotes = technicianNotes;
+      await report.save();
+
+      return NextResponse.json({
+        success: true,
+        message: "Test parameter results saved.",
+        status: report.status,
+        report: report.toObject(),
+      });
+    }
+
+    // 4. ACTION: submit_result_for_review
+    if (action === "submit_result_for_review" || action === "submit_for_review") {
+      const { results, technicianNotes } = body;
+
+      if (results && Array.isArray(results) && results.length > 0) {
+        report.results = results.map((r: any) => ({
+          parameter: r.parameter?.trim() || "Parameter",
+          value: r.value?.trim() || "",
+          unit: r.unit?.trim() || "",
+          referenceRange: r.referenceRange?.trim() || "",
+          flag: ["normal", "high", "low", "critical"].includes(r.flag)
+            ? r.flag
+            : "normal",
+        }));
+      }
+
+      if (!report.results || report.results.length === 0) {
+        return NextResponse.json(
+          { error: "At least one test result parameter is required to submit for review." },
+          { status: 400 }
+        );
+      }
+
+      report.status = "submitted_for_review";
+      (report as any).submittedForReviewAt = new Date();
+      (report as any).submittedBy = technicianName;
+      report.verifiedBy = "Awaiting Pathologist Review (Dr. Sunita Patil, MD)";
+      if (technicianNotes) (report as any).technicianNotes = technicianNotes;
+      await report.save();
+
+      // Update sample status to analyzed
+      await LabSample.updateOne(
+        { labReportId: report._id },
+        { status: "analyzed" }
+      );
+
+      // Create notification for Pathologist
+      try {
+        const pathologistUser = await (await import("@/models")).User.findOne({
+          role: "pathologist",
+        });
+        if (pathologistUser) {
+          await Notification.create({
+            recipientId: pathologistUser._id,
+            title: `Review Requisition: ${report.testName}`,
+            message: `Technician ${technicianName} submitted results for ${report.testName} (Sample: ${(report as any).sampleId || "N/A"}). Review and verification required.`,
+            type: "lab_report",
+            link: `/pathologist/review/${report._id}`,
+            isRead: false,
+          });
+        }
+      } catch (err) {
+        console.error("Pathologist notification creation failed:", err);
       }
 
       return NextResponse.json({
         success: true,
-        message: "Diagnostic run initiated on analyzer. Status transitioned to Processing.",
+        message: "Result successfully submitted for Pathologist review.",
         status: report.status,
+        report: report.toObject(),
       });
     }
 
-    return NextResponse.json({ error: "Invalid action specified" }, { status: 400 });
-  } catch (error: any) {
-    console.error("Lab request action POST error:", error);
+    // Direct status update fallback (e.g. mark sample_pending)
+    if (body.status) {
+      if (
+        [
+          "requested",
+          "sample_pending",
+          "sample_collected",
+          "processing",
+          "result_entered",
+          "submitted_for_review",
+        ].includes(body.status)
+      ) {
+        report.status = body.status;
+        if (body.technicianNotes) (report as any).technicianNotes = body.technicianNotes;
+        await report.save();
+        return NextResponse.json({ success: true, report: report.toObject() });
+      }
+    }
+
     return NextResponse.json(
-      { error: error.message || "Failed to process lab request action" },
+      { error: "Invalid action or unhandled technician request state" },
+      { status: 400 }
+    );
+  } catch (error: any) {
+    console.error("Lab Request Detail PATCH error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update lab request" },
       { status: 500 }
     );
   }

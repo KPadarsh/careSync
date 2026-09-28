@@ -3,283 +3,403 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  IconArrowLeft,
-  IconTestTube,
-  IconBarcode,
-  IconClock,
-  IconFlask,
-  IconUser,
-  IconCheckCircle,
-  IconAlertTriangle,
-  IconChevronRight,
+  SamplesIcon,
+  BarcodeIcon,
+  PrinterIcon,
+  ChevronRightIcon,
+  AlertTriangleIcon,
+  CheckIcon,
+  ClockIcon,
 } from "./LabIcons";
 
-interface SampleDetailProps {
+interface SampleDetailViewProps {
   id: string;
 }
 
-export function SampleDetailView({ id }: SampleDetailProps) {
-  const [sample, setSample] = useState<any>(null);
-  const [labReport, setLabReport] = useState<any>(null);
-  const [chainOfCustody, setChainOfCustody] = useState<any[]>([]);
+export const SampleDetailView: React.FC<SampleDetailViewProps> = ({ id }) => {
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Edit storage location state
-  const [editingStorage, setEditingStorage] = useState(false);
-  const [newStorage, setNewStorage] = useState("");
-  const [savingStorage, setSavingStorage] = useState(false);
+  // Editable fields
+  const [storageLocation, setStorageLocation] = useState("");
+  const [sampleStatus, setSampleStatus] = useState("collected");
+  const [notes, setNotes] = useState("");
 
-  const loadData = async () => {
-    setLoading(true);
+  const fetchSample = async () => {
     try {
+      setLoading(true);
       const res = await fetch(`/api/lab/samples/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSample(data.sample);
-        setLabReport(data.labReport);
-        setChainOfCustody(data.chainOfCustody || []);
-        setNewStorage(data.sample?.storageLocation || "Station Rack A-1");
-      } else {
-        setError("Failed to load specimen details");
+      if (!res.ok) {
+        throw new Error("Failed to load sample details");
       }
-    } catch (err) {
-      console.error(err);
-      setError("Network error while loading specimen");
+      const json = await res.json();
+      setData(json.sample);
+      setStorageLocation(json.sample.storageLocation || "Rack A-01 / Ambient");
+      setSampleStatus(json.sample.status || "collected");
+      setNotes(json.sample.technicianNotes || "");
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    fetchSample();
   }, [id]);
 
-  const handleUpdateStorage = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingStorage(true);
     try {
+      setUpdating(true);
+      setSuccessMsg(null);
       const res = await fetch(`/api/lab/samples/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storageLocation: newStorage }),
+        body: JSON.stringify({
+          storageLocation,
+          status: sampleStatus,
+          technicianNotes: notes,
+        }),
       });
-      if (res.ok) {
-        setEditingStorage(false);
-        await loadData();
-      } else {
-        alert("Failed to update storage location");
+      if (!res.ok) {
+        throw new Error("Failed to update sample details");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating storage location");
+      setSuccessMsg("Sample storage location and status updated.");
+      await fetchSample();
+    } catch (err: any) {
+      setError(err.message || "Update failed");
     } finally {
-      setSavingStorage(false);
+      setUpdating(false);
     }
+  };
+
+  const handlePrintLabel = () => {
+    window.print();
   };
 
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <div className="w-8 h-8 border-3 border-[#004ac6] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Loading specimen chain of custody...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium text-slate-600">Loading Sample Specification...</span>
+        </div>
       </div>
     );
   }
 
-  if (error || !sample) {
+  if (error || !data) {
     return (
-      <div className="bg-white rounded-xl p-8 border border-slate-200 text-center space-y-4">
-        <IconAlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
-        <h2 className="text-lg font-bold text-slate-800">Specimen Not Found</h2>
-        <p className="text-sm text-slate-500">{error || "Could not retrieve the specimen file."}</p>
+      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <AlertTriangleIcon size={24} className="text-rose-600" />
+          <span>{error || "Sample not found."}</span>
+        </div>
         <Link
           href="/lab/samples"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors"
+          className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700"
         >
-          <IconArrowLeft className="w-4 h-4" />
           Back to Samples
         </Link>
       </div>
     );
   }
 
+  const { patient, doctor, report, chainOfCustody } = data;
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Top Breadcrumb */}
+    <div className="flex flex-col gap-6">
+      {/* BREADCRUMB NAVIGATION */}
       <div className="flex items-center justify-between">
-        <Link
-          href="/lab/samples"
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-[#004ac6] transition-colors"
-        >
-          <IconArrowLeft className="w-4 h-4" />
-          Back to Specimens
-        </Link>
-        {labReport && (
-          <Link
-            href={`/lab/requests/${labReport.id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#004ac6] hover:underline"
-          >
-            Go to Lab Order Details
-            <IconChevronRight className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <Link href="/lab/dashboard" className="hover:text-[#00355f]">
+            Lab
           </Link>
-        )}
-      </div>
-
-      {/* Main Specimen Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
-              <IconTestTube className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-mono font-bold text-slate-900">{sample.sampleId}</h1>
-                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-100 text-teal-800">
-                  {sample.status?.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-sm text-slate-500 mt-1">
-                Investigation:{" "}
-                <span className="font-semibold text-slate-800">{labReport?.testType || "Laboratory Test"}</span>
-                {" • "}
-                Sample: <span className="font-medium text-slate-700">{sample.sampleType}</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Barcode representation */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
-            <div className="flex items-center gap-1 py-1 px-3 bg-white border border-slate-300 rounded shadow-inner">
-              <div className="h-8 w-1 bg-slate-800" />
-              <div className="h-8 w-0.5 bg-slate-800" />
-              <div className="h-8 w-2 bg-slate-800" />
-              <div className="h-8 w-0.5 bg-slate-800" />
-              <div className="h-8 w-1 bg-slate-800" />
-              <div className="h-8 w-1.5 bg-slate-800" />
-              <div className="h-8 w-0.5 bg-slate-800" />
-              <div className="h-8 w-2 bg-slate-800" />
-              <div className="h-8 w-1 bg-slate-800" />
-            </div>
-            <span className="text-[11px] font-mono text-slate-600 font-bold mt-1.5 tracking-wider">
-              {sample.barcode}
-            </span>
-            <span className="text-[10px] text-slate-400 mt-0.5">Secure Non-PHI Token</span>
-          </div>
+          <span>/</span>
+          <Link href="/lab/samples" className="hover:text-[#00355f]">
+            Samples
+          </Link>
+          <span>/</span>
+          <span className="font-semibold text-slate-800">{data.sampleId}</span>
         </div>
 
-        {/* Specimen Technical Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-4">
-            <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Container / Tube</div>
-              <div className="font-semibold text-slate-800 text-base mt-1">{sample.containerType}</div>
-              <div className="text-xs text-slate-500 mt-0.5">Recommended fill volume: 4.0 mL</div>
-            </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePrintLabel}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-colors"
+          >
+            <PrinterIcon size={14} />
+            <span>Print Barcode Label</span>
+          </button>
+          <Link
+            href="/lab/samples"
+            className="text-xs font-semibold text-[#006a68] hover:underline"
+          >
+            ← Back to Samples
+          </Link>
+        </div>
+      </div>
 
-            <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Collection Volume</div>
-              <div className="font-semibold text-slate-800 text-base mt-1">{sample.collectionVolume || "4.0 mL"}</div>
-            </div>
+      {successMsg && (
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckIcon size={16} className="text-teal-600" />
+            <span>{successMsg}</span>
           </div>
+          <button onClick={() => setSuccessMsg(null)}>✕</button>
+        </div>
+      )}
 
-          <div className="space-y-4">
-            <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Collected At</div>
-              <div className="font-semibold text-slate-800 text-sm mt-1">
-                {sample.collectedAt ? new Date(sample.collectedAt).toLocaleString() : "Today"}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                Phlebotomist: <span className="font-medium text-slate-700">{sample.collectedBy?.name || "Arun Kumar"}</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Storage Rack</div>
-              {editingStorage ? (
-                <form onSubmit={handleUpdateStorage} className="mt-1 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newStorage}
-                    onChange={(e) => setNewStorage(e.target.value)}
-                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={savingStorage}
-                    className="px-2.5 py-1 bg-[#004ac6] text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingStorage(false)}
-                    className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded-lg"
-                  >
-                    Cancel
-                  </button>
-                </form>
-              ) : (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="font-semibold text-slate-800 text-sm">{sample.storageLocation || "Station Rack A-1"}</span>
-                  <button
-                    onClick={() => setEditingStorage(true)}
-                    className="text-xs text-[#004ac6] font-medium hover:underline"
-                  >
-                    Edit
-                  </button>
+      {/* TOP SAMPLE HERO & PRINTABLE BARCODE LABEL */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* SPECIMEN SUMMARY */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#006a68] flex items-center justify-center font-bold">
+                  <SamplesIcon size={20} />
                 </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold font-mono text-[#00355f]">
+                      {data.sampleId}
+                    </h1>
+                    <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-bold uppercase">
+                      {data.status}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-500">{data.testName}</span>
+                </div>
+              </div>
+
+              {report && (
+                <Link
+                  href={`/lab/requests/${report._id}`}
+                  className="text-xs font-semibold text-[#006a68] hover:underline flex items-center gap-1"
+                >
+                  <span>Open Requisition</span>
+                  <ChevronRightIcon size={14} />
+                </Link>
               )}
             </div>
+
+            {/* Specimen Specifications */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-xs">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Specimen Type
+                </span>
+                <span className="font-semibold text-slate-800 mt-0.5 block">
+                  {data.specimenType}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Collection Tube
+                </span>
+                <span className="font-semibold text-slate-800 mt-0.5 block">
+                  {data.tubeType}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Volume
+                </span>
+                <span className="font-semibold text-slate-800 mt-0.5 block">
+                  {data.volume || "4.0 mL"}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Storage Rack
+                </span>
+                <span className="font-mono font-bold text-teal-800 mt-0.5 block">
+                  {data.storageLocation}
+                </span>
+              </div>
+            </div>
+
+            {/* Patient & Doctor Context */}
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-600">
+              <div>
+                <span className="text-slate-400">Patient: </span>
+                <strong className="text-slate-800">{patient?.name}</strong>{" "}
+                ({patient?.mrn} • {patient?.bloodGroup})
+              </div>
+              <div>
+                <span className="text-slate-400">Doctor: </span>
+                <strong className="text-slate-800">{doctor?.name}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* PRINTABLE BARCODE LABEL (Pure SVG, NO PATIENT PII ENCODED) */}
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col items-center justify-between text-center">
+          <div className="w-full flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-semibold text-slate-500">
+            <span>BARCODE PRINT PREVIEW</span>
+            <span className="text-teal-700">2x1 Direct Thermal</span>
           </div>
 
-          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <IconUser className="w-3.5 h-3.5 text-slate-500" />
-              Patient Association
+          {/* Barcode Sticker Simulation */}
+          <div className="my-4 p-4 rounded-lg border-2 border-dashed border-slate-300 bg-white w-full max-w-[280px] shadow-2xs flex flex-col items-center">
+            <span className="text-[11px] font-bold tracking-tight text-slate-800 uppercase">
+              CareSync Pathology Lab
+            </span>
+            <span className="text-[10px] font-mono text-slate-500 mt-0.5">
+              TOKEN: {data.barcodeToken}
+            </span>
+
+            {/* High fidelity SVG 1D Barcode */}
+            <div className="my-2 bg-white py-1">
+              <svg width="220" height="42" viewBox="0 0 220 42" className="text-slate-900">
+                <line x1="10" y1="0" x2="10" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="16" y1="0" x2="16" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="22" y1="0" x2="22" y2="42" stroke="currentColor" strokeWidth="4" />
+                <line x1="30" y1="0" x2="30" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="36" y1="0" x2="36" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="42" y1="0" x2="42" y2="42" stroke="currentColor" strokeWidth="3" />
+                <line x1="48" y1="0" x2="48" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="56" y1="0" x2="56" y2="42" stroke="currentColor" strokeWidth="4" />
+                <line x1="64" y1="0" x2="64" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="72" y1="0" x2="72" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="78" y1="0" x2="78" y2="42" stroke="currentColor" strokeWidth="3" />
+                <line x1="86" y1="0" x2="86" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="94" y1="0" x2="94" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="100" y1="0" x2="100" y2="42" stroke="currentColor" strokeWidth="4" />
+                <line x1="108" y1="0" x2="108" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="116" y1="0" x2="116" y2="42" stroke="currentColor" strokeWidth="3" />
+                <line x1="124" y1="0" x2="124" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="130" y1="0" x2="130" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="136" y1="0" x2="136" y2="42" stroke="currentColor" strokeWidth="4" />
+                <line x1="144" y1="0" x2="144" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="152" y1="0" x2="152" y2="42" stroke="currentColor" strokeWidth="3" />
+                <line x1="160" y1="0" x2="160" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="166" y1="0" x2="166" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="174" y1="0" x2="174" y2="42" stroke="currentColor" strokeWidth="4" />
+                <line x1="182" y1="0" x2="182" y2="42" stroke="currentColor" strokeWidth="2" />
+                <line x1="190" y1="0" x2="190" y2="42" stroke="currentColor" strokeWidth="3" />
+                <line x1="198" y1="0" x2="198" y2="42" stroke="currentColor" strokeWidth="1" />
+                <line x1="206" y1="0" x2="206" y2="42" stroke="currentColor" strokeWidth="2" />
+              </svg>
             </div>
-            <div>
-              <div className="font-bold text-slate-900">{sample.patient?.name || "Patient Record"}</div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                {sample.patient?.age}y • {sample.patient?.gender}
-              </div>
-              <div className="text-xs font-mono text-slate-400 mt-1">
-                Ref ID: {sample.patient?.id?.slice(-8).toUpperCase()}
-              </div>
+
+            <div className="flex items-center justify-between w-full text-[9px] font-mono text-slate-700 px-2 mt-1">
+              <span>{data.sampleId}</span>
+              <span>{data.specimenType.substring(0, 10)}</span>
+              <span>{new Date(data.collectedAt).toLocaleDateString()}</span>
             </div>
           </div>
+
+          <span className="text-[10px] text-slate-400">
+            Complies with HIPAA safe harbor: Barcode only identifies unique token, no patient PII.
+          </span>
         </div>
       </div>
 
-      {/* Chain of Custody Timeline */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-          <IconClock className="w-4 h-4 text-slate-500" />
-          Chain of Custody & Audit Log
-        </h2>
+      {/* CHAIN OF CUSTODY TIMELINE & EDIT STORAGE */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* CHAIN OF CUSTODY */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-xs p-5">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <ClockIcon size={18} className="text-[#006a68]" />
+            <h2 className="font-bold text-sm text-[#00355f]">Chain of Custody Audit Log</h2>
+          </div>
 
-        <div className="space-y-4 pl-2 border-l-2 border-blue-200 mt-4">
-          {chainOfCustody.length === 0 ? (
-            <div className="text-xs text-slate-500">No events recorded yet.</div>
-          ) : (
-            chainOfCustody.map((log, idx) => (
-              <div key={idx} className="relative pl-6">
-                <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-[#004ac6] ring-4 ring-blue-50" />
-                <div className="text-xs font-bold text-slate-900">{log.action}</div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  By {log.performedBy} • {new Date(log.timestamp).toLocaleString()}
+          <div className="mt-4 flex flex-col gap-4">
+            {chainOfCustody?.map((item: any, idx: number) => (
+              <div key={idx} className="flex items-start gap-3">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
+                    item.status === "completed"
+                      ? "bg-teal-100 text-[#006a68]"
+                      : item.status === "in-progress"
+                      ? "bg-purple-100 text-purple-700 animate-pulse"
+                      : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {item.status === "completed" ? "✓" : idx + 1}
                 </div>
-                {log.details && (
-                  <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1 max-w-lg">
-                    {log.details}
-                  </p>
-                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-900">{item.step}</span>
+                    <span className="text-[10px] text-slate-400">
+                      {item.time ? new Date(item.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Pending"}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-600 mt-0.5">
+                    Actor: {item.actor} • Location: {item.location}
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-0.5">{item.notes}</span>
+                </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
+
+        {/* UPDATE SAMPLE STORAGE & STATUS */}
+        <form
+          onSubmit={handleUpdate}
+          className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4"
+        >
+          <div className="pb-3 border-b border-slate-100">
+            <h2 className="font-bold text-sm text-[#00355f]">Update Storage Location</h2>
+            <p className="text-xs text-slate-500">Manage specimen location in laboratory archive.</p>
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs">
+            <label className="font-semibold text-slate-700">Storage Rack / Unit</label>
+            <input
+              type="text"
+              value={storageLocation}
+              onChange={(e) => setStorageLocation(e.target.value)}
+              className="p-2 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 font-mono focus:ring-1 focus:ring-[#0f4c81]"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs">
+            <label className="font-semibold text-slate-700">Specimen Status</label>
+            <select
+              value={sampleStatus}
+              onChange={(e) => setSampleStatus(e.target.value)}
+              className="p-2 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 font-medium focus:ring-1 focus:ring-[#0f4c81]"
+            >
+              <option value="collected">Collected (Accessioned)</option>
+              <option value="processing">Processing on Carousel</option>
+              <option value="analyzed">Analyzed (Completed Run)</option>
+              <option value="stored">Cold Stored (Archived 4°C)</option>
+              <option value="disposed">Disposed (Biohazard Protocol)</option>
+              <option value="rejected">Rejected (Pre-analytical failure)</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs">
+            <label className="font-semibold text-slate-700">Technician Remarks</label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Storage rack notes or specimen condition..."
+              className="p-2 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 focus:ring-1 focus:ring-[#0f4c81]"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={updating}
+            className="w-full py-2 bg-[#00355f] hover:bg-[#0f4c81] text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+          >
+            {updating ? "Saving..." : "Save Location & Status"}
+          </button>
+        </form>
       </div>
     </div>
   );
-}
+};

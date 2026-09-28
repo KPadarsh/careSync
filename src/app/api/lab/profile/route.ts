@@ -1,31 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireLabTechSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { requireLabSession } from "@/lib/auth";
 import { User } from "@/models";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    const session = await requireLabTechSession();
+    const session = await requireLabSession();
     const user = session.user;
 
     return NextResponse.json({
-      technician: {
+      user: {
         _id: user._id.toString(),
         name: user.name,
         email: user.email,
-        phone: user.phone || "+1 (555) 019-3829",
         role: user.role,
+        phone: user.phone || "+1 (555) 019-3388",
         avatar: user.avatar,
-        station: session.station || "Diagnostic Station A-4",
-        department: "Clinical Pathology & Diagnostic Hematology",
-        certifications: "ASCP Certified Medical Laboratory Technician (MLT)",
-        shiftHours: "07:00 AM – 03:30 PM (Morning Run)",
-        status: "On Duty",
+        station: "Central Diagnostic Lab • Station 2",
+        certification: "MLT (ASCP) • Senior Medical Laboratory Technologist",
+        licenseNumber: "MLT-89241-NY",
+        shift: "Morning Analytical Shift (08:00 - 16:30)",
+        department: "Clinical Pathology & Biochemistry",
       },
     });
   } catch (error: any) {
-    console.error("Lab profile GET error:", error);
+    console.error("Lab Profile GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load technician profile" },
       { status: 500 }
@@ -36,7 +36,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     await connectToDatabase();
-    const session = await requireLabTechSession();
+    const session = await requireLabSession();
     const user = await User.findById(session.user._id);
 
     if (!user) {
@@ -44,36 +44,26 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { phone, avatar, currentPassword, newPassword } = body;
-
-    if (phone !== undefined) user.phone = phone.trim();
-    if (avatar !== undefined) user.avatar = avatar;
-
-    if (currentPassword && newPassword) {
-      const isMatch = verifyPassword(currentPassword, user.passwordHash);
-      if (!isMatch) {
-        return NextResponse.json(
-          { error: "Incorrect current password" },
-          { status: 400 }
-        );
-      }
-      user.passwordHash = hashPassword(newPassword);
-    }
+    if (body.name) user.name = body.name.trim();
+    if (body.phone) user.phone = body.phone.trim();
+    if (body.avatar) user.avatar = body.avatar.trim();
 
     await user.save();
 
     return NextResponse.json({
       success: true,
-      message: "Technician profile updated successfully",
-      technician: {
+      message: "Technician profile updated successfully.",
+      user: {
+        _id: user._id.toString(),
         name: user.name,
         email: user.email,
+        role: user.role,
         phone: user.phone,
         avatar: user.avatar,
       },
     });
   } catch (error: any) {
-    console.error("Lab profile PATCH error:", error);
+    console.error("Lab Profile PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update profile" },
       { status: 500 }

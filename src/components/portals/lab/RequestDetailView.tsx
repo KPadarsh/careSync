@@ -4,580 +4,754 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  IconArrowLeft,
-  IconFlask,
-  IconTestTube,
-  IconBarcode,
-  IconClock,
-  IconAlertTriangle,
-  IconCheckCircle,
-  IconChevronRight,
-  IconUser,
-  IconShield,
-  IconPlus,
-  IconX,
+  RequestsIcon,
+  SamplesIcon,
+  TestsIcon,
+  CompletedIcon,
+  ClockIcon,
+  AlertTriangleIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  BarcodeIcon,
+  BeakerIcon,
+  PrinterIcon,
+  UserIcon,
 } from "./LabIcons";
 
-interface RequestDetailProps {
+interface RequestDetailViewProps {
   id: string;
 }
 
-export function RequestDetailView({ id }: RequestDetailProps) {
+interface ResultRow {
+  parameter: string;
+  value: string;
+  unit: string;
+  referenceRange: string;
+  flag: "normal" | "high" | "low" | "critical";
+}
+
+export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
   const router = useRouter();
-  const [request, setRequest] = useState<any>(null);
-  const [sample, setSample] = useState<any>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Collect Sample Modal State
-  const [showCollectModal, setShowCollectModal] = useState(false);
-  const [sampleType, setSampleType] = useState("Blood (Whole)");
-  const [containerType, setContainerType] = useState("Lavender (EDTA)");
-  const [collectionVolume, setCollectionVolume] = useState("4.0 mL");
-  const [storageLocation, setStorageLocation] = useState("Immediate Processing Rack A-1");
-  const [collectionNotes, setCollectionNotes] = useState("");
   const [submittingAction, setSubmittingAction] = useState(false);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  // Sample Collection state
+  const [specimenType, setSpecimenType] = useState("Venous Blood");
+  const [tubeType, setTubeType] = useState("Lavender Top (EDTA)");
+  const [collectionSite, setCollectionSite] = useState("Station 2 Phlebotomy");
+  const [sampleVolume, setSampleVolume] = useState("4.0 mL");
+  const [collectionNotes, setCollectionNotes] = useState("");
+
+  // Processing state
+  const [analyzerBench, setAnalyzerBench] = useState("Roche Cobas 6000 Chemistry Analyzer");
+  const [processingNotes, setProcessingNotes] = useState("");
+
+  // Result entry state
+  const [results, setResults] = useState<ResultRow[]>([]);
+  const [technicianNotes, setTechnicianNotes] = useState("");
+
+  const fetchDetail = async () => {
     try {
+      setLoading(true);
       const res = await fetch(`/api/lab/requests/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRequest(data.request);
-        setSample(data.sample);
-      } else {
-        setError("Failed to load request details");
+      if (!res.ok) {
+        throw new Error("Failed to load requisition details");
       }
-    } catch (err) {
-      console.error(err);
-      setError("Network error while loading request");
+      const json = await res.json();
+      setData(json.request);
+      setTechnicianNotes(json.request.technicianNotes || "");
+      if (json.request.results && json.request.results.length > 0) {
+        setResults(json.request.results);
+      } else {
+        // Pre-fill standard templates for common tests
+        const testName = json.request.testName.toLowerCase();
+        if (testName.includes("troponin") || testName.includes("cardiac")) {
+          setResults([
+            { parameter: "High-Sensitivity Troponin I", value: "", unit: "ng/L", referenceRange: "< 14.0 (Normal), > 26.0 (Elevated)", flag: "normal" },
+            { parameter: "CK-MB Isoenzyme", value: "", unit: "ng/mL", referenceRange: "0.0 - 5.0", flag: "normal" },
+            { parameter: "Myoglobin", value: "", unit: "ng/mL", referenceRange: "28 - 72", flag: "normal" },
+          ]);
+        } else if (testName.includes("cbc") || testName.includes("blood count")) {
+          setResults([
+            { parameter: "Hemoglobin", value: "", unit: "g/dL", referenceRange: "13.5 - 17.5", flag: "normal" },
+            { parameter: "White Blood Cells (WBC)", value: "", unit: "x10³/µL", referenceRange: "4.5 - 11.0", flag: "normal" },
+            { parameter: "Platelet Count", value: "", unit: "x10³/µL", referenceRange: "150 - 450", flag: "normal" },
+            { parameter: "Hematocrit (HCT)", value: "", unit: "%", referenceRange: "38.8 - 50.0", flag: "normal" },
+          ]);
+        } else if (testName.includes("lipid") || testName.includes("cholesterol")) {
+          setResults([
+            { parameter: "Total Cholesterol", value: "", unit: "mg/dL", referenceRange: "< 200 (Desirable)", flag: "normal" },
+            { parameter: "Triglycerides", value: "", unit: "mg/dL", referenceRange: "< 150 (Normal)", flag: "normal" },
+            { parameter: "HDL Cholesterol", value: "", unit: "mg/dL", referenceRange: "> 40 (Normal)", flag: "normal" },
+            { parameter: "LDL Cholesterol", value: "", unit: "mg/dL", referenceRange: "< 100 (Optimal)", flag: "normal" },
+          ]);
+        } else {
+          setResults([
+            { parameter: `${json.request.testName} Primary Assay`, value: "", unit: "Index / Value", referenceRange: "Normal Range", flag: "normal" },
+          ]);
+        }
+      }
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    fetchDetail();
   }, [id]);
 
-  const handleCollectSample = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmittingAction(true);
+  const handleAction = async (action: string, payload: any = {}) => {
     try {
+      setSubmittingAction(true);
+      setActionSuccessMsg(null);
       const res = await fetch(`/api/lab/requests/${id}`, {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "collect-sample",
-          sampleType,
-          containerType,
-          collectionVolume,
-          storageLocation,
-          notes: collectionNotes,
-        }),
+        body: JSON.stringify({ action, ...payload }),
       });
 
-      if (res.ok) {
-        setShowCollectModal(false);
-        await loadData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to record sample");
+      const resJson = await res.json();
+      if (!res.ok) {
+        throw new Error(resJson.error || "Action failed");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error recording sample");
+
+      setActionSuccessMsg(resJson.message || "Action updated successfully.");
+      await fetchDetail();
+    } catch (err: any) {
+      setError(err.message || "Failed to execute action");
     } finally {
       setSubmittingAction(false);
     }
   };
 
-  const handleStartProcessing = async () => {
-    if (!confirm("Confirm sample integrity and begin analyzer processing?")) return;
-    setSubmittingAction(true);
-    try {
-      const res = await fetch(`/api/lab/requests/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start-processing" }),
-      });
+  const updateResultRow = (index: number, field: keyof ResultRow, val: string) => {
+    const updated = [...results];
+    updated[index] = { ...updated[index], [field]: val };
+    setResults(updated);
+  };
 
-      if (res.ok) {
-        await loadData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to start processing");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error starting test processing");
-    } finally {
-      setSubmittingAction(false);
-    }
+  const addResultRow = () => {
+    setResults([
+      ...results,
+      { parameter: "", value: "", unit: "", referenceRange: "", flag: "normal" },
+    ]);
+  };
+
+  const removeResultRow = (index: number) => {
+    setResults(results.filter((_, i) => i !== index));
   };
 
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <div className="w-8 h-8 border-3 border-[#004ac6] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-medium">Loading lab order details...</p>
-      </div>
-    );
-  }
-
-  if (error || !request) {
-    return (
-      <div className="bg-white rounded-xl p-8 border border-slate-200 text-center space-y-4">
-        <IconAlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
-        <h2 className="text-lg font-bold text-slate-800">Order Not Found</h2>
-        <p className="text-sm text-slate-500">{error || "Could not retrieve the requested lab investigation."}</p>
-        <Link
-          href="/lab/requests"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors"
-        >
-          <IconArrowLeft className="w-4 h-4" />
-          Back to Lab Requests
-        </Link>
-      </div>
-    );
-  }
-
-  const steps = [
-    { key: "requested", label: "Requested" },
-    { key: "sample-pending", label: "Sample Pending" },
-    { key: "sample-collected", label: "Sample Collected" },
-    { key: "processing", label: "Processing" },
-    { key: "result-entered", label: "Result Entered" },
-    { key: "submitted-for-review", label: "Submitted for Review" },
-    { key: "verified", label: "Pathologist Verified" },
-  ];
-
-  const currentStepIndex = steps.findIndex((s) => s.key === request.status);
-  const activeStep = currentStepIndex >= 0 ? currentStepIndex : 0;
-
-  return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Top Nav Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/lab/requests"
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-[#004ac6] transition-colors"
-        >
-          <IconArrowLeft className="w-4 h-4" />
-          Back to Requests
-        </Link>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-mono">Order Ref:</span>
-          <span className="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-700">
-            {request.reportNumber}
-          </span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium text-slate-600">Loading Requisition Details...</span>
         </div>
       </div>
+    );
+  }
 
-      {/* Main Order Header Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+  if (error || !data) {
+    return (
+      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <AlertTriangleIcon size={24} className="text-rose-600" />
+          <span>{error || "Requisition not found."}</span>
+        </div>
+        <Link
+          href="/lab/requests"
+          className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700"
+        >
+          Back to Requests
+        </Link>
+      </div>
+    );
+  }
+
+  const { patient, doctor, sample } = data;
+  const currentStatus = data.status?.toLowerCase();
+
+  // Status step progression calculation
+  const statusSteps = [
+    { key: "requested", label: "Requested" },
+    { key: "sample_pending", label: "Sample Pending" },
+    { key: "sample_collected", label: "Sample Collected" },
+    { key: "processing", label: "Processing" },
+    { key: "result_entered", label: "Result Entered" },
+    { key: "submitted_for_review", label: "Submitted for Review" },
+    { key: "verified", label: "Pathologist" },
+  ];
+
+  const getStepIndex = (st: string) => {
+    if (st === "pending") return 0;
+    if (st === "in-progress") return 3;
+    if (st === "finalized") return 6;
+    const idx = statusSteps.findIndex((s) => s.key === st);
+    return idx >= 0 ? idx : 0;
+  };
+
+  const currentStepIdx = getStepIndex(currentStatus);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* BREADCRUMB NAVIGATION */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <Link href="/lab/dashboard" className="hover:text-[#00355f]">
+            Lab
+          </Link>
+          <span>/</span>
+          <Link href="/lab/requests" className="hover:text-[#00355f]">
+            Requests
+          </Link>
+          <span>/</span>
+          <span className="font-semibold text-slate-800">{data.testName}</span>
+        </div>
+
+        <Link
+          href="/lab/requests"
+          className="text-xs font-semibold text-[#006a68] hover:underline flex items-center gap-1"
+        >
+          ← Back to Requests
+        </Link>
+      </div>
+
+      {/* SUCCESS NOTIFICATION */}
+      {actionSuccessMsg && (
+        <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckIcon size={16} className="text-teal-600" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+          <button
+            onClick={() => setActionSuccessMsg(null)}
+            className="text-teal-600 hover:text-teal-900"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* PATIENT & REQUISITION HERO CARD */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#004ac6] shrink-0">
-              <IconFlask className="w-7 h-7" />
+            <div className="w-12 h-12 rounded-xl bg-[#00355f] text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+              {patient.bloodGroup || "O+"}
             </div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold text-slate-900">{request.testType}</h1>
-                {request.priority === "stat" ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                    <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl font-bold text-[#00355f]">{patient.name}</h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-mono font-semibold">
+                  {patient.mrn}
+                </span>
+                {data.priority === "stat" ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold uppercase animate-pulse">
                     STAT Priority
                   </span>
-                ) : request.priority === "urgent" ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                ) : data.priority === "urgent" ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold uppercase">
                     Urgent
                   </span>
                 ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold uppercase">
                     Routine
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-500 mt-1">
-                Category: <span className="font-medium text-slate-700">{request.testCategory || "Diagnostic Pathology"}</span>
-                {" • "}
-                Ordered on:{" "}
-                <span className="font-medium text-slate-700">
-                  {request.requestedDate ? new Date(request.requestedDate).toLocaleString() : "Today"}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          {/* Action CTAs */}
-          <div className="flex items-center gap-3">
-            {(request.status === "requested" || request.status === "sample-pending") && (
-              <button
-                onClick={() => setShowCollectModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#004ac6] hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
-              >
-                <IconTestTube className="w-4 h-4" />
-                Collect & Record Sample
-              </button>
-            )}
-
-            {request.status === "sample-collected" && (
-              <button
-                onClick={handleStartProcessing}
-                disabled={submittingAction}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-50"
-              >
-                <IconFlask className="w-4 h-4" />
-                {submittingAction ? "Starting..." : "Begin Processing on Analyzer"}
-              </button>
-            )}
-
-            {(request.status === "processing" || request.status === "result-entered") && (
-              <Link
-                href={`/lab/tests/${id}`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
-              >
-                <IconCheckCircle className="w-4 h-4" />
-                {request.status === "result-entered" ? "Review & Submit Results" : "Enter Test Results"}
-              </Link>
-            )}
-
-            {request.status === "submitted-for-review" && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold rounded-xl">
-                <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
-                Awaiting Pathologist Verification
+              <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                <span>{patient.age} years old</span>
+                <span>•</span>
+                <span className="capitalize">{patient.gender}</span>
+                <span>•</span>
+                <span>Blood: <strong>{patient.bloodGroup}</strong></span>
+                <span>•</span>
+                <span>Tel: {patient.phone}</span>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Workflow Progression Stepper */}
-        <div className="pt-6">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">
-            Diagnostic Workflow Progress
-          </div>
-          <div className="relative">
-            {/* Step Line */}
-            <div className="hidden sm:block absolute top-4 left-6 right-6 h-0.5 bg-slate-200 -z-0" />
-            <div
-              className="hidden sm:block absolute top-4 left-6 h-0.5 bg-[#004ac6] transition-all duration-500 -z-0"
-              style={{
-                width: `${(activeStep / (steps.length - 1)) * 100}%`,
-              }}
-            />
-
-            <div className="grid grid-cols-2 sm:grid-cols-7 gap-3 relative z-10">
-              {steps.map((step, idx) => {
-                const isPassed = idx < activeStep;
-                const isCurrent = idx === activeStep;
-                return (
-                  <div key={step.key} className="flex flex-col items-center text-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-sm ${
-                        isPassed
-                          ? "bg-[#004ac6] text-white"
-                          : isCurrent
-                          ? "bg-[#004ac6] text-white ring-4 ring-blue-100"
-                          : "bg-white border-2 border-slate-300 text-slate-400"
-                      }`}
-                    >
-                      {isPassed ? "✓" : idx + 1}
-                    </div>
-                    <span
-                      className={`text-xs font-medium mt-2 leading-tight ${
-                        isCurrent
-                          ? "text-[#004ac6] font-bold"
-                          : isPassed
-                          ? "text-slate-800"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {step.label}
-                    </span>
+              {patient.allergies && patient.allergies.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <span className="text-[11px] font-semibold text-rose-700">Allergies:</span>
+                  <div className="flex gap-1 flex-wrap">
+                    {patient.allergies.map((allg: string) => (
+                      <span
+                        key={allg}
+                        className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-medium"
+                      >
+                        {allg}
+                      </span>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* DOCTOR INFO BADGE */}
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col gap-1 min-w-[240px]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Requesting Physician
+            </span>
+            <span className="text-xs font-bold text-slate-800">{doctor.name}</span>
+            <span className="text-[11px] text-slate-500">
+              {doctor.specialty} • {doctor.department}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5">
+              Ordered: {new Date(data.requestedDate).toLocaleDateString()} at{" "}
+              {new Date(data.requestedDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
+        </div>
+
+        {/* CLINICAL SUMMARY */}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-1 text-xs">
+          <span className="font-semibold text-slate-700">Clinical Indication / Summary:</span>
+          <p className="text-slate-600 bg-[#f8f9fe] p-2.5 rounded-lg border border-slate-200/80">
+            {data.summary || "Routine diagnostic evaluation."}
+          </p>
         </div>
       </div>
 
-      {/* Patient & Doctor Order Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Patient Demographic Card */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <IconUser className="w-4 h-4 text-slate-500" />
-              Patient Information
-            </h2>
-            <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-              MRN: {request.patient?.mrn || request.patient?.id?.slice(-8).toUpperCase()}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-xs text-slate-400">Full Name</div>
-              <div className="font-bold text-slate-900 text-base">{request.patient?.name || "Patient Record"}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400">Age & Gender</div>
-              <div className="font-semibold text-slate-800">
-                {request.patient?.age || "—"} yrs • {request.patient?.gender || "—"}
+      {/* STATUS FLOW PROGRESS BAR (Strictly following prompt) */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 sm:p-5">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-3">
+          Workflow Progression
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {statusSteps.map((step, idx) => {
+            const isCompleted = idx < currentStepIdx;
+            const isCurrent = idx === currentStepIdx;
+            return (
+              <div
+                key={step.key}
+                className={`p-2.5 rounded-lg border text-center flex flex-col items-center gap-1 transition-all ${
+                  isCurrent
+                    ? "bg-[#00355f] text-white border-[#00355f] shadow-xs font-bold"
+                    : isCompleted
+                    ? "bg-teal-50 border-teal-200 text-teal-800 font-semibold"
+                    : "bg-slate-50 border-slate-200 text-slate-400 font-medium"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    isCurrent
+                      ? "bg-white text-[#00355f]"
+                      : isCompleted
+                      ? "bg-[#006a68] text-white"
+                      : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  {isCompleted ? "✓" : idx + 1}
+                </div>
+                <span className="text-[11px] leading-tight">{step.label}</span>
               </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400">Contact Number</div>
-              <div className="font-medium text-slate-700">{request.patient?.phone || "+91 98765 43210"}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400">Blood Group</div>
-              <div className="font-semibold text-rose-600">{request.patient?.bloodGroup || "O Positive"}</div>
-            </div>
-          </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Ordering Doctor Card */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <IconFlask className="w-4 h-4 text-slate-500" />
-              Doctor Order & Clinical Notes
-            </h2>
-            <span className="text-xs font-medium text-slate-500">
-              {request.doctor?.department || "General Medicine"}
-            </span>
-          </div>
+      {/* PERMISSIONS DISCLAIMER */}
+      <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-900 text-xs flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-800">
+          <ClockIcon size={18} />
+        </div>
+        <div className="flex flex-col">
+          <span className="font-bold">Technician Authorization Level</span>
+          <span className="text-blue-800/80">
+            You may collect specimens, record sample identifiers, execute instrument analysis, and submit results for review.
+            Pathology verification and final sign-off belong exclusively to Board Certified Pathologist Dr. Sunita Patil, MD.
+          </span>
+        </div>
+      </div>
 
-          <div className="space-y-3 text-sm">
-            <div>
-              <div className="text-xs text-slate-400">Ordering Physician</div>
-              <div className="font-bold text-slate-900">{request.doctor?.name || "Dr. Staff Physician"}</div>
+      {/* STEP 1 & 2: SAMPLE COLLECTION & BARCODE ACCREDITATION */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#006a68] flex items-center justify-center">
+              <SamplesIcon size={18} />
             </div>
-
             <div>
-              <div className="text-xs text-slate-400">Clinical Indication / Reason</div>
-              <p className="text-slate-700 bg-slate-50 p-2.5 rounded-lg text-xs leading-relaxed border border-slate-100 mt-1">
-                {request.clinicalReason || "Diagnostic evaluation requested per routine clinical consultation protocol."}
+              <h2 className="font-bold text-sm text-[#00355f]">
+                Specimen Collection &amp; Sample Management
+              </h2>
+              <p className="text-xs text-slate-500">
+                Collect sample, generate standardized SMP-2026 identifier, and attach secure barcode.
               </p>
             </div>
-
-            {request.instructions && (
-              <div>
-                <div className="text-xs text-slate-400">Doctor Instructions</div>
-                <p className="text-slate-700 bg-amber-50/60 text-amber-900 p-2.5 rounded-lg text-xs border border-amber-100 mt-1">
-                  {request.instructions}
-                </p>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
 
-      {/* Specimen / Sample Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <IconTestTube className="w-4 h-4 text-slate-500" />
-            Specimen & Chain of Custody (LabSample)
-          </h2>
-          {sample && (
-            <Link
-              href={`/lab/samples/${sample.id}`}
-              className="text-xs font-semibold text-[#004ac6] hover:underline flex items-center gap-1"
-            >
-              View Full Specimen File
-              <IconChevronRight className="w-3.5 h-3.5" />
-            </Link>
+          {data.sampleId && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 text-xs font-mono font-bold">
+              <BarcodeIcon size={14} />
+              {data.sampleId}
+            </span>
           )}
         </div>
 
-        {sample ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+        {/* Existing Sample Card or Collection Form */}
+        {data.sample ? (
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div>
-              <div className="text-xs text-slate-400 font-medium">Sample Identifier</div>
-              <div className="font-mono font-bold text-base text-slate-900 mt-0.5">{sample.sampleId}</div>
-              <div className="mt-1">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono bg-white border border-slate-200 text-slate-600">
-                  <IconBarcode className="w-3 h-3 text-slate-400" />
-                  {sample.barcode}
-                </span>
-              </div>
+              <span className="text-slate-400 font-semibold block uppercase text-[10px]">
+                Sample Identifier
+              </span>
+              <span className="font-mono font-bold text-sm text-[#00355f]">
+                {data.sample.sampleId}
+              </span>
             </div>
-
             <div>
-              <div className="text-xs text-slate-400 font-medium">Sample & Container</div>
-              <div className="font-semibold text-slate-800 mt-0.5">{sample.sampleType}</div>
-              <div className="text-xs text-slate-500">{sample.containerType}</div>
+              <span className="text-slate-400 font-semibold block uppercase text-[10px]">
+                Specimen / Tube
+              </span>
+              <span className="font-semibold text-slate-800">
+                {data.sample.specimenType} ({data.sample.tubeType})
+              </span>
             </div>
-
             <div>
-              <div className="text-xs text-slate-400 font-medium">Collection Volume & Loc</div>
-              <div className="font-semibold text-slate-800 mt-0.5">{sample.collectionVolume || "4.0 mL"}</div>
-              <div className="text-xs text-slate-500">{sample.storageLocation || "Station Rack A-1"}</div>
+              <span className="text-slate-400 font-semibold block uppercase text-[10px]">
+                Secure Barcode Token
+              </span>
+              <span className="font-mono text-slate-700">
+                {data.sample.barcode}
+              </span>
             </div>
-
             <div>
-              <div className="text-xs text-slate-400 font-medium">Collected By & Time</div>
-              <div className="font-semibold text-slate-800 mt-0.5">{sample.collectedBy?.name || "Arun Kumar"}</div>
-              <div className="text-xs text-slate-500">
-                {sample.collectedAt ? new Date(sample.collectedAt).toLocaleString() : "Today"}
-              </div>
+              <span className="text-slate-400 font-semibold block uppercase text-[10px]">
+                Storage Location
+              </span>
+              <span className="font-semibold text-slate-800">
+                {data.sample.storageLocation}
+              </span>
             </div>
           </div>
         ) : (
-          <div className="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 space-y-3">
-            <IconTestTube className="w-8 h-8 text-amber-500 mx-auto" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div>
-              <p className="font-semibold text-slate-800 text-sm">Specimen Has Not Been Collected</p>
-              <p className="text-xs text-slate-500 max-w-md mx-auto mt-0.5">
-                Prepare the phlebotomy collection kit according to standard test protocol and record the tube barcode.
-              </p>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Specimen Type
+              </label>
+              <select
+                value={specimenType}
+                onChange={(e) => setSpecimenType(e.target.value)}
+                className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+              >
+                <option value="Venous Blood">Venous Blood</option>
+                <option value="Serum">Serum</option>
+                <option value="Plasma">Plasma</option>
+                <option value="Whole Blood (EDTA)">Whole Blood (EDTA)</option>
+                <option value="Urine (Clean Catch)">Urine (Clean Catch)</option>
+                <option value="Cerebrospinal Fluid (CSF)">CSF</option>
+                <option value="Nasopharyngeal Swab">Nasopharyngeal Swab</option>
+              </select>
             </div>
-            <button
-              onClick={() => setShowCollectModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#004ac6] hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
-            >
-              <IconPlus className="w-4 h-4" />
-              Collect & Register Sample
-            </button>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Collection Tube
+              </label>
+              <select
+                value={tubeType}
+                onChange={(e) => setTubeType(e.target.value)}
+                className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+              >
+                <option value="Lavender Top (EDTA)">Lavender Top (EDTA)</option>
+                <option value="Gold Top (SST)">Gold Top (SST / Gel Separator)</option>
+                <option value="Light Blue (Sodium Citrate)">Light Blue (Sodium Citrate)</option>
+                <option value="Red Top (Plain)">Red Top (Plain Glass/Plastic)</option>
+                <option value="Gray Top (Sodium Fluoride)">Gray Top (Sodium Fluoride)</option>
+                <option value="Green Top (Lithium Heparin)">Green Top (Heparin)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Collection Bay / Site
+              </label>
+              <input
+                type="text"
+                value={collectionSite}
+                onChange={(e) => setCollectionSite(e.target.value)}
+                className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+              />
+            </div>
+
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1">
+                Volume
+              </label>
+              <input
+                type="text"
+                value={sampleVolume}
+                onChange={(e) => setSampleVolume(e.target.value)}
+                className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-3">
+              <label className="font-semibold text-slate-700 block mb-1">
+                Technician Phlebotomy Notes
+              </label>
+              <input
+                type="text"
+                placeholder="Sample drawn smoothly without hemolysis or prolonged stasis..."
+                value={collectionNotes}
+                onChange={(e) => setCollectionNotes(e.target.value)}
+                className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={() =>
+                  handleAction("collect_sample", {
+                    specimenType,
+                    tubeType,
+                    collectionSite,
+                    volume: sampleVolume,
+                    notes: collectionNotes,
+                  })
+                }
+                disabled={submittingAction}
+                className="w-full py-2 bg-[#006a68] hover:bg-[#00504e] text-white rounded-lg font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
+              >
+                <BarcodeIcon size={15} />
+                <span>{submittingAction ? "Recording..." : "Collect & Record Sample"}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Permissions / Role Notice */}
-      <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-3 text-xs text-slate-600">
-        <IconShield className="w-5 h-5 text-[#004ac6] shrink-0 mt-0.5" />
-        <div>
-          <span className="font-bold text-slate-800">Technician Authority Boundaries:</span> Lab Technicians record
-          specimens, operate diagnostic analyzers, and submit calibrated results for review.
-          <span className="font-semibold text-[#004ac6]"> Verification, clinical approval, and finalized pathology release</span>{" "}
-          are strictly conducted by the Pathologist.
+      {/* STEP 3: BEGIN PROCESSING / ANALYZER BENCH */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+              <TestsIcon size={18} />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-[#00355f]">
+                Analytical Instrument Bench
+              </h2>
+              <p className="text-xs text-slate-500">
+                Assign diagnostic analyzer carousel and begin automated testing run.
+              </p>
+            </div>
+          </div>
+
+          {data.analyzerBench && (
+            <span className="text-xs text-purple-700 font-semibold bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200">
+              {data.analyzerBench}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div className="sm:col-span-2">
+            <label className="font-semibold text-slate-700 block mb-1">
+              Select Analyzer / Bench Station
+            </label>
+            <select
+              value={analyzerBench}
+              onChange={(e) => setAnalyzerBench(e.target.value)}
+              className="w-full bg-[#f8f9fe] border border-slate-200 rounded-lg p-2 text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+            >
+              <option value="Roche Cobas 6000 Chemistry Analyzer">Roche Cobas 6000 Chemistry Analyzer</option>
+              <option value="Sysmex XN-1000 Automated Hematology">Sysmex XN-1000 Automated Hematology</option>
+              <option value="Beckman Coulter Access 2 Immunoassay">Beckman Coulter Access 2 Immunoassay</option>
+              <option value="Bio-Rad D-100 Hemoglobin Testing System">Bio-Rad D-100 Hemoglobin Testing System</option>
+              <option value="Manual Microscopy & Coagulation Bench 3">Manual Microscopy &amp; Coagulation Bench 3</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() =>
+                handleAction("begin_processing", {
+                  analyzerBench,
+                  notes: processingNotes,
+                })
+              }
+              disabled={submittingAction || currentStatus === "submitted_for_review" || currentStatus === "verified"}
+              className="w-full py-2 bg-[#00355f] hover:bg-[#0f4c81] text-white rounded-lg font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <TestsIcon size={15} />
+              <span>{submittingAction ? "Updating..." : "Begin Processing"}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Collect Sample Modal */}
-      {showCollectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-100 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#004ac6] flex items-center justify-center">
-                  <IconTestTube className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">Collect & Record Specimen</h3>
-                  <p className="text-xs text-slate-500">Record sample collection details and generate tube ID</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowCollectModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
-              >
-                <IconX className="w-5 h-5" />
-              </button>
+      {/* STEP 4: TEST RESULT ENTRY STATION */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-800 flex items-center justify-center">
+              <BeakerIcon size={18} />
             </div>
-
-            <form onSubmit={handleCollectSample} className="p-6 space-y-4">
-              <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-xs text-slate-700">
-                <div className="font-bold text-slate-900 mb-0.5">Sample Identifier Generation:</div>
-                A unique <span className="font-mono font-semibold text-[#004ac6]">SMP-2026-XXXXX</span> identifier and
-                secure barcode token will be assigned. No sensitive patient information is encoded in the barcode.
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Sample Type</label>
-                <select
-                  value={sampleType}
-                  onChange={(e) => setSampleType(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                >
-                  <option value="Blood (Whole)">Blood (Whole)</option>
-                  <option value="Serum">Serum</option>
-                  <option value="Plasma">Plasma</option>
-                  <option value="Urine (Clean Catch)">Urine (Clean Catch)</option>
-                  <option value="Sputum">Sputum</option>
-                  <option value="Nasopharyngeal Swab">Nasopharyngeal Swab</option>
-                  <option value="Stool Specimen">Stool Specimen</option>
-                  <option value="Synovial Fluid">Synovial Fluid</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Container / Vacutainer</label>
-                  <select
-                    value={containerType}
-                    onChange={(e) => setContainerType(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                  >
-                    <option value="Lavender (EDTA)">Lavender (EDTA)</option>
-                    <option value="Gold (SST Gel)">Gold (SST Gel)</option>
-                    <option value="Red (Plain Tube)">Red (Plain Tube)</option>
-                    <option value="Light Blue (Sodium Citrate)">Light Blue (Sodium Citrate)</option>
-                    <option value="Grey (Fluoride Oxalate)">Grey (Fluoride Oxalate)</option>
-                    <option value="Green (Sodium Heparin)">Green (Sodium Heparin)</option>
-                    <option value="Sterile Cup">Sterile Cup</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Collection Volume</label>
-                  <input
-                    type="text"
-                    value={collectionVolume}
-                    onChange={(e) => setCollectionVolume(e.target.value)}
-                    placeholder="e.g. 4.0 mL"
-                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Storage / Analyzer Station Rack</label>
-                <input
-                  type="text"
-                  value={storageLocation}
-                  onChange={(e) => setStorageLocation(e.target.value)}
-                  placeholder="e.g. Immediate Processing Rack A-1"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Phlebotomist / Collection Notes</label>
-                <textarea
-                  rows={2}
-                  value={collectionNotes}
-                  onChange={(e) => setCollectionNotes(e.target.value)}
-                  placeholder="Optional specimen quality notes (e.g. slight hemolysis, fasting confirmed)..."
-                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#004ac6] focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCollectModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingAction}
-                  className="px-5 py-2 text-sm font-semibold text-white bg-[#004ac6] hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {submittingAction ? "Recording..." : "Confirm Collection"}
-                </button>
-              </div>
-            </form>
+            <div>
+              <h2 className="font-bold text-sm text-[#00355f]">
+                Test Result Entry Station
+              </h2>
+              <p className="text-xs text-slate-500">
+                Enter test values, units, reference ranges, flags, and technician operational notes.
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={addResultRow}
+            className="text-xs font-semibold text-[#006a68] hover:underline flex items-center gap-1"
+          >
+            + Add Parameter Row
+          </button>
         </div>
-      )}
+
+        {/* RESULTS TABLE */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th className="py-2.5 px-3">Test Parameter</th>
+                <th className="py-2.5 px-3 w-32">Value</th>
+                <th className="py-2.5 px-3 w-28">Unit</th>
+                <th className="py-2.5 px-3 w-48">Reference Range</th>
+                <th className="py-2.5 px-3 w-32">Flag</th>
+                <th className="py-2.5 px-3 w-16 text-center">Remove</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {results.map((row, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/60">
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={row.parameter}
+                      onChange={(e) => updateResultRow(idx, "parameter", e.target.value)}
+                      placeholder="Parameter name..."
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded text-slate-800 font-medium focus:ring-1 focus:ring-[#0f4c81]"
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={row.value}
+                      onChange={(e) => updateResultRow(idx, "value", e.target.value)}
+                      placeholder="e.g. 14.2"
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded text-slate-900 font-bold focus:ring-1 focus:ring-[#0f4c81]"
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={row.unit}
+                      onChange={(e) => updateResultRow(idx, "unit", e.target.value)}
+                      placeholder="e.g. mg/dL"
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded text-slate-600 focus:ring-1 focus:ring-[#0f4c81]"
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="text"
+                      value={row.referenceRange}
+                      onChange={(e) => updateResultRow(idx, "referenceRange", e.target.value)}
+                      placeholder="e.g. 70 - 99"
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded text-slate-600 focus:ring-1 focus:ring-[#0f4c81]"
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <select
+                      value={row.flag}
+                      onChange={(e) => updateResultRow(idx, "flag", e.target.value as any)}
+                      className={`w-full p-1.5 border rounded font-semibold focus:ring-1 focus:ring-[#0f4c81] ${
+                        row.flag === "critical"
+                          ? "bg-rose-100 text-rose-800 border-rose-300"
+                          : row.flag === "high"
+                          ? "bg-amber-50 text-amber-800 border-amber-300"
+                          : row.flag === "low"
+                          ? "bg-blue-50 text-blue-800 border-blue-300"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="high">High ↑</option>
+                      <option value="low">Low ↓</option>
+                      <option value="critical">Critical !!</option>
+                    </select>
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => removeResultRow(idx)}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                      title="Remove row"
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* TECHNICIAN NOTES */}
+        <div className="flex flex-col gap-1 text-xs">
+          <label className="font-semibold text-slate-700">
+            Technician Notes &amp; Instrument Calibration Remarks
+          </label>
+          <textarea
+            rows={2}
+            value={technicianNotes}
+            onChange={(e) => setTechnicianNotes(e.target.value)}
+            placeholder="Specimen integrity confirmed. Two-point calibration run verified within ±1 SD. Telemetry linked to Station 2 database..."
+            className="w-full p-2.5 bg-[#f8f9fe] border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0f4c81]"
+          />
+        </div>
+
+        {/* ACTION BUTTONS (Notice: Submit Result for Review only; No Verify/Approve/Finalize) */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              handleAction("save_results", {
+                results,
+                technicianNotes,
+              })
+            }
+            disabled={submittingAction || currentStatus === "submitted_for_review" || currentStatus === "verified"}
+            className="w-full sm:w-auto px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            Save Draft Results
+          </button>
+
+          {/* Action Required by prompt: Submit Result for Review */}
+          <button
+            type="button"
+            onClick={() =>
+              handleAction("submit_result_for_review", {
+                results,
+                technicianNotes,
+              })
+            }
+            disabled={submittingAction || results.length === 0 || currentStatus === "submitted_for_review" || currentStatus === "verified"}
+            className="w-full sm:w-auto px-5 py-2.5 bg-[#006a68] hover:bg-[#00504e] text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <CheckIcon size={16} />
+            <span>Submit Result for Review</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+};

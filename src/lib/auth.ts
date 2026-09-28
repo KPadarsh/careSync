@@ -436,13 +436,12 @@ export async function requireDoctorSession(): Promise<{
 }
 
 /**
- * Get the current authenticated lab technician session.
- * If no session exists, seeds database and logs in default technician Arun Kumar.
+ * Retrieve authenticated lab technician session.
+ * Falls back to default technician Vikram Malhotra if no active session.
  */
-export async function getLabTechSession(): Promise<{
+export async function getLabSession(): Promise<{
   user: IUser;
   role: Role;
-  station: string;
 } | null> {
   await connectToDatabase();
   const cookieStore = await cookies();
@@ -450,17 +449,14 @@ export async function getLabTechSession(): Promise<{
 
   if (sessionCookie?.value) {
     const payload = verifySession(sessionCookie.value);
-    if (
-      payload &&
-      (payload.role === ROLES.LAB_TECHNICIAN || payload.role === ROLES.ADMIN)
-    ) {
+    if (payload?.userId) {
       const user = await User.findById(payload.userId);
-      if (user) {
-        return {
-          user,
-          role: user.role,
-          station: "Diagnostic Station A-4",
-        };
+      if (
+        user &&
+        user.status === "active" &&
+        (user.role === ROLES.LAB_TECHNICIAN || user.role === ROLES.ADMIN)
+      ) {
+        return { user, role: user.role };
       }
     }
   }
@@ -470,9 +466,8 @@ export async function getLabTechSession(): Promise<{
   await seedCareSyncDatabase();
 
   const labUser = await User.findOne({
-    email: "arun.lab@caresync.com",
+    email: "vikram@lab.caresync.com",
   });
-
   if (labUser) {
     try {
       await setSessionCookie({
@@ -486,7 +481,6 @@ export async function getLabTechSession(): Promise<{
     return {
       user: labUser,
       role: labUser.role,
-      station: "Diagnostic Station A-4",
     };
   }
 
@@ -496,12 +490,11 @@ export async function getLabTechSession(): Promise<{
 /**
  * Strictly require an authenticated lab technician session.
  */
-export async function requireLabTechSession(): Promise<{
+export async function requireLabSession(): Promise<{
   user: IUser;
   role: Role;
-  station: string;
 }> {
-  const session = await getLabTechSession();
+  const session = await getLabSession();
   if (
     !session ||
     (session.role !== ROLES.LAB_TECHNICIAN && session.role !== ROLES.ADMIN)
@@ -510,4 +503,144 @@ export async function requireLabTechSession(): Promise<{
   }
   return session;
 }
+
+/**
+ * Retrieve authenticated pathologist session.
+ * Falls back to default pathologist Dr. Sunita Patil if no active session.
+ */
+export async function getPathologistSession(): Promise<{
+  user: IUser;
+  role: Role;
+} | null> {
+  await connectToDatabase();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+
+  if (sessionCookie?.value) {
+    const payload = verifySession(sessionCookie.value);
+    if (payload?.userId) {
+      const user = await User.findById(payload.userId);
+      if (
+        user &&
+        user.status === "active" &&
+        (user.role === ROLES.PATHOLOGIST || user.role === ROLES.ADMIN)
+      ) {
+        return { user, role: user.role };
+      }
+    }
+  }
+
+  // Ensure database is seeded with pathologist
+  const { seedCareSyncDatabase } = await import("@/lib/seed");
+  await seedCareSyncDatabase();
+
+  const pathologistUser = await User.findOne({
+    email: "sunita@pathology.caresync.com",
+  });
+  if (pathologistUser) {
+    try {
+      await setSessionCookie({
+        userId: pathologistUser._id.toString(),
+        email: pathologistUser.email,
+        role: pathologistUser.role,
+      });
+    } catch {
+      // Ignore if called in read-only phase
+    }
+    return {
+      user: pathologistUser,
+      role: pathologistUser.role,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Strictly require an authenticated pathologist session.
+ */
+export async function requirePathologistSession(): Promise<{
+  user: IUser;
+  role: Role;
+}> {
+  const session = await getPathologistSession();
+  if (
+    !session ||
+    (session.role !== ROLES.PATHOLOGIST && session.role !== ROLES.ADMIN)
+  ) {
+    throw new Error("UNAUTHORIZED_PATHOLOGIST");
+  }
+  return session;
+}
+
+/**
+ * Retrieve authenticated pharmacist session.
+ * Falls back to default pharmacist Deepak Varma if no active session.
+ */
+export async function getPharmacySession(): Promise<{
+  user: IUser;
+  role: Role;
+} | null> {
+  await connectToDatabase();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+
+  if (sessionCookie?.value) {
+    const payload = verifySession(sessionCookie.value);
+    if (payload?.userId) {
+      const user = await User.findById(payload.userId);
+      if (
+        user &&
+        user.status === "active" &&
+        (user.role === ROLES.PHARMACY || user.role === ROLES.ADMIN)
+      ) {
+        return { user, role: user.role };
+      }
+    }
+  }
+
+  // Ensure database is seeded with pharmacist
+  const { seedCareSyncDatabase } = await import("@/lib/seed");
+  await seedCareSyncDatabase();
+
+  const pharmacyUser = await User.findOne({
+    email: "deepak@pharmacy.caresync.com",
+  });
+  if (pharmacyUser) {
+    try {
+      await setSessionCookie({
+        userId: pharmacyUser._id.toString(),
+        email: pharmacyUser.email,
+        role: pharmacyUser.role,
+      });
+    } catch {
+      // Ignore if called in read-only phase
+    }
+    return {
+      user: pharmacyUser,
+      role: pharmacyUser.role,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Strictly require an authenticated pharmacist session.
+ */
+export async function requirePharmacySession(): Promise<{
+  user: IUser;
+  role: Role;
+}> {
+  const session = await getPharmacySession();
+  if (
+    !session ||
+    (session.role !== ROLES.PHARMACY && session.role !== ROLES.ADMIN)
+  ) {
+    throw new Error("UNAUTHORIZED_PHARMACY");
+  }
+  return session;
+}
+
+
 

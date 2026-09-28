@@ -9,14 +9,30 @@ export interface IMedicationItem {
   refillsRemaining: number;
 }
 
+export type PrescriptionStatus =
+  | "pending"
+  | "reviewed"
+  | "ready"
+  | "dispensing"
+  | "dispensed"
+  | "completed"
+  | "clarification_requested"
+  | "active"
+  | "discontinued";
+
 export interface IPrescription extends Document {
   patientId: Types.ObjectId;
   doctorId: Types.ObjectId;
   visitId?: Types.ObjectId;
   date: Date;
-  status: "active" | "completed" | "discontinued";
+  status: PrescriptionStatus;
   medications: IMedicationItem[];
   notes?: string;
+  pharmacistNotes?: string;
+  clarificationReason?: string;
+  reviewedBy?: Types.ObjectId;
+  reviewedAt?: Date;
+  dispensingRecordId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,12 +67,27 @@ const PrescriptionSchema = new Schema<IPrescription>(
     date: { type: Date, required: true, default: Date.now, index: true },
     status: {
       type: String,
-      enum: ["active", "completed", "discontinued"],
-      default: "active",
+      enum: [
+        "pending",
+        "reviewed",
+        "ready",
+        "dispensing",
+        "dispensed",
+        "completed",
+        "clarification_requested",
+        "active",
+        "discontinued",
+      ],
+      default: "pending",
       index: true,
     },
     medications: { type: [MedicationItemSchema], required: true },
     notes: { type: String },
+    pharmacistNotes: { type: String },
+    clarificationReason: { type: String },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    reviewedAt: { type: Date },
+    dispensingRecordId: { type: Schema.Types.ObjectId, ref: "DispensingRecord" },
   },
   {
     timestamps: true,

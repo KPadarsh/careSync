@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireLabTechSession } from "@/lib/auth";
-import { LabSample, Patient, LabReport } from "@/models";
+import { requireLabSession } from "@/lib/auth";
+import { LabSample, LabReport, Patient, Doctor } from "@/models";
 
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    await requireLabTechSession();
+    await requireLabSession();
 
     const { searchParams } = new URL(request.url);
-    const filter = searchParams.get("filter") || "all"; // all, collected, processing, stored, pending
+    const statusFilter = searchParams.get("status")?.toLowerCase() || "all";
+    const typeFilter = searchParams.get("type")?.toLowerCase() || "all";
     const search = searchParams.get("search")?.trim().toLowerCase();
 
     const query: any = {};
-    if (filter !== "all") {
-      query.status = filter;
+
+    if (statusFilter && statusFilter !== "all") {
+      query.status = statusFilter;
+    }
+
+    if (typeFilter && typeFilter !== "all") {
+      query.specimenType = { $regex: new RegExp(typeFilter, "i") };
     }
 
     const samples = await LabSample.find(query)
       .populate({
         path: "patientId",
-        select: "firstName lastName mrn dateOfBirth gender bloodGroup phone allergies",
-        populate: { path: "userId", select: "name email avatar" },
+        select: "firstName lastName mrn dateOfBirth gender bloodGroup",
+        populate: { path: "userId", select: "name avatar" },
       })
-      .populate("labReportId", "testName department priority status")
+      .populate("doctorId", "name specialty")
+      .populate("labReportId", "status priority summary results")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -39,31 +46,41 @@ export async function GET(request: NextRequest) {
               (Date.now() - new Date(s.patientId.dateOfBirth).getTime()) /
                 (365.25 * 24 * 60 * 60 * 1000)
             )
-          : 34;
+          : 35;
 
         return {
           _id: s._id.toString(),
           sampleId: s.sampleId,
-          barcode: s.barcode,
+          labReportId: s.labReportId?._id?.toString() || s.labReportId?.toString(),
           testName: s.testName,
-          sampleType: s.sampleType,
-          containerType: s.containerType,
-          collectionVolume: s.collectionVolume,
-          collectedBy: s.collectedBy,
+          department: s.department,
+          specimenType: s.specimenType,
+          tubeType: s.tubeType,
+          barcode: s.barcode,
+          barcodeToken: s.barcodeToken,
+          collectionSite: s.collectionSite,
           collectedAt: s.collectedAt,
-          status: s.status,
+          collectedBy: s.collectedBy,
           storageLocation: s.storageLocation,
-          notes: s.notes || "",
+          volume: s.volume,
+          status: s.status,
+          rejectionReason: s.rejectionReason,
+          technicianNotes: s.technicianNotes,
+          requestStatus: s.labReportId?.status || "sample_collected",
           priority: s.labReportId?.priority || "routine",
-          reportStatus: s.labReportId?.status || s.status,
-          reportId: s.labReportId?._id?.toString(),
           patient: {
             _id: s.patientId?._id?.toString(),
             name: patientName,
             mrn: s.patientId?.mrn || "MRN-N/A",
             age,
-            gender: s.patientId?.gender || "male",
+            gender: s.patientId?.gender || "unknown",
             bloodGroup: s.patientId?.bloodGroup || "O+",
+            avatar: s.patientId?.userId?.avatar,
+          },
+          doctor: {
+            _id: s.doctorId?._id?.toString(),
+            name: s.doctorId?.name || "Dr. Anil Kumar",
+            specialty: s.doctorId?.specialty || "Internal Medicine",
           },
         };
       })
@@ -73,6 +90,7 @@ export async function GET(request: NextRequest) {
         return (
           s.sampleId.toLowerCase().includes(q) ||
           s.barcode.toLowerCase().includes(q) ||
+          s.barcodeToken.toLowerCase().includes(q) ||
           s.testName.toLowerCase().includes(q) ||
           s.patient.name.toLowerCase().includes(q) ||
           s.patient.mrn.toLowerCase().includes(q) ||
@@ -80,22 +98,97 @@ export async function GET(request: NextRequest) {
         );
       });
 
-    const counts = {
-      all: formatted.length,
-      collected: formatted.filter((s) => s.status === "collected").length,
-      processing: formatted.filter((s) => s.status === "processing").length,
-      stored: formatted.filter((s) => s.status === "stored").length,
-      pending: formatted.filter((s) => s.status === "pending").length,
-    };
-
-    return NextResponse.json({
-      samples: formatted,
-      counts,
-    });
+    return NextResponse.json({ samples: formatted });
   } catch (error: any) {
-    console.error("Lab samples GET error:", error);
+    console.error("Lab Samples GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load laboratory samples" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectToDatabase();
+    const session = await requireLabSession();
+    const technicianName = session.user.name || "Vikram Malhotra, MLT";
+    const body = await request.json();
+
+    const {
+      labReportId,
+      specimenType = "Venous Blood",
+      tubeType = "Lavender Top (EDTA)",
+      collectionSite = "Central Phlebotomy Station 2",
+      storageLocation = "Rack A-01 / Ambient",
+      volume = "4.0 mL",
+      technicianNotes,
+    } = body;
+
+    if (!labReportId) {
+      return NextResponse.json(
+        { error: "Lab Report ID is required to accession a sample" },
+        { status: 400 }
+      );
+    }
+
+    const report = await LabReport.findById(labReportId);
+    if (!report) {
+      return NextResponse.json(
+        { error: "Linked lab requisition not found" },
+        { status: 404 }
+      );
+    }
+
+    // Generate sample ID
+    const count = await LabSample.countDocuments();
+    const seq = (count + 130).toString().padStart(5, "0");
+    const sampleId = `SMP-2026-${seq}`;
+
+    // Generate safe non-PII barcode
+    const randomToken = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const barcode = `CS-${sampleId}-${randomToken}`;
+    const barcodeToken = `${sampleId}-${randomToken}`;
+
+    const newSample = await LabSample.create({
+      sampleId,
+      labReportId: report._id,
+      patientId: report.patientId,
+      doctorId: report.doctorId,
+      testName: report.testName,
+      department: report.department,
+      specimenType,
+      tubeType,
+      barcode,
+      barcodeToken,
+      collectionSite,
+      collectedAt: new Date(),
+      collectedBy: technicianName,
+      storageLocation,
+      volume,
+      status: "collected",
+      technicianNotes: technicianNotes || `Accessioned by ${technicianName}`,
+    });
+
+    report.status = "sample_collected";
+    (report as any).sampleId = sampleId;
+    (report as any).sampleDocId = newSample._id as any;
+    (report as any).sampleType = specimenType;
+    (report as any).tubeType = tubeType;
+    (report as any).barcode = barcode;
+    (report as any).sampleCollectedAt = new Date();
+    (report as any).sampleCollectedBy = technicianName;
+    await report.save();
+
+    return NextResponse.json({
+      success: true,
+      sample: newSample.toObject(),
+      message: `Sample ${sampleId} successfully accessioned and barcode generated.`,
+    });
+  } catch (error: any) {
+    console.error("Lab Samples POST error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to accession sample" },
       { status: 500 }
     );
   }

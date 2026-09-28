@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { LabShell, ProfileView } from "@/components/portals/lab";
 
 export const metadata: Metadata = {
-  title: "Technician Profile | CareSync",
-  description: "Manage technician credentials, laboratory station assignment, and shift parameters.",
+  title: "Lab Technologist Profile | CareSync",
+  description:
+    "Credentials, active workstation assignment, license details, and personal contact info for Vikram Malhotra, MLT.",
 };
 
 export default function LabProfilePage() {

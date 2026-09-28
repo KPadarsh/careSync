@@ -8,36 +8,62 @@ export interface ILabResultItem {
   flag: "normal" | "high" | "low" | "critical";
 }
 
-export type LabRequestStatus =
+export type LabReportStatus =
   | "requested"
-  | "sample-pending"
-  | "sample-collected"
+  | "sample_pending"
+  | "sample_collected"
   | "processing"
-  | "result-entered"
-  | "submitted-for-review"
+  | "result_entered"
+  | "submitted_for_review"
+  | "under_review"
+  | "correction_required"
   | "verified"
   | "finalized"
-  | "pending"
-  | "in-progress";
+  | "pending" // backward compatibility
+  | "in-progress"; // backward compatibility
+
+export interface IReportRevision {
+  revisionDate: Date;
+  revisedBy: string;
+  reason: string;
+  previousSummary?: string;
+  previousInterpretation?: string;
+}
 
 export interface ILabReport extends Document {
   patientId: Types.ObjectId;
   doctorId: Types.ObjectId;
-  sampleId?: Types.ObjectId; // Reference to LabSample
-  sampleCode?: string; // e.g. SMP-2026-00125
   testName: string;
   department: string;
   priority: "routine" | "urgent" | "stat";
-  clinicalReason?: string;
-  instructions?: string;
+  sampleId?: string; // e.g. SMP-2026-00125
+  sampleDocId?: Types.ObjectId; // ref: LabSample
+  sampleType?: string;
+  tubeType?: string;
+  barcode?: string;
   sampleCollectionDate: Date;
+  sampleCollectedAt?: Date;
+  sampleCollectedBy?: string;
+  processingStartedAt?: Date;
+  processingBy?: string;
+  analyzerBench?: string;
+  resultEnteredAt?: Date;
+  submittedForReviewAt?: Date;
+  submittedBy?: string;
+  underReviewAt?: Date;
+  underReviewBy?: string;
+  correctionRequestedAt?: Date;
+  correctionReason?: string;
   verifiedDate?: Date;
-  submittedAt?: Date;
-  submittedBy?: string; // Technician Name
-  status: LabRequestStatus;
+  verifiedAt?: Date;
+  status: LabReportStatus;
   summary: string;
   technicianNotes?: string;
   verifiedBy?: string;
+  pathologistNotes?: string;
+  pathologistInterpretation?: string;
+  pathologistComments?: string;
+  revisionHistory?: IReportRevision[];
   results: ILabResultItem[];
   fileUrl?: string;
   createdAt: Date;
@@ -73,46 +99,71 @@ const LabReportSchema = new Schema<ILabReport>(
       required: true,
       index: true,
     },
-    sampleId: {
-      type: Schema.Types.ObjectId,
-      ref: "LabSample",
-      index: true,
-    },
-    sampleCode: { type: String, trim: true },
     testName: { type: String, required: true, trim: true },
-    department: { type: String, required: true, trim: true, default: "Diagnostic Pathology" },
+    department: { type: String, required: true, trim: true },
     priority: {
       type: String,
       enum: ["routine", "urgent", "stat"],
       default: "routine",
       index: true,
     },
-    clinicalReason: { type: String, default: "" },
-    instructions: { type: String, default: "" },
-    sampleCollectionDate: { type: Date, default: Date.now },
-    verifiedDate: { type: Date },
-    submittedAt: { type: Date },
+    sampleId: { type: String, trim: true, index: true },
+    sampleDocId: { type: Schema.Types.ObjectId, ref: "LabSample", index: true },
+    sampleType: { type: String, trim: true },
+    tubeType: { type: String, trim: true },
+    barcode: { type: String, trim: true, index: true },
+    sampleCollectionDate: { type: Date, required: true },
+    sampleCollectedAt: { type: Date },
+    sampleCollectedBy: { type: String },
+    processingStartedAt: { type: Date },
+    processingBy: { type: String },
+    analyzerBench: { type: String },
+    resultEnteredAt: { type: Date },
+    submittedForReviewAt: { type: Date },
     submittedBy: { type: String },
+    underReviewAt: { type: Date },
+    underReviewBy: { type: String },
+    correctionRequestedAt: { type: Date },
+    correctionReason: { type: String },
+    verifiedDate: { type: Date },
+    verifiedAt: { type: Date },
     status: {
       type: String,
       enum: [
         "requested",
-        "sample-pending",
-        "sample-collected",
+        "sample_pending",
+        "sample_collected",
         "processing",
-        "result-entered",
-        "submitted-for-review",
+        "result_entered",
+        "submitted_for_review",
+        "under_review",
+        "correction_required",
         "verified",
         "finalized",
         "pending",
         "in-progress",
       ],
-      default: "sample-pending",
+      default: "requested",
       index: true,
     },
-    summary: { type: String, default: "" },
-    technicianNotes: { type: String, default: "" },
+    summary: { type: String, required: true },
+    technicianNotes: { type: String },
     verifiedBy: { type: String, default: "Dr. Sunita Patil, MD Pathology" },
+    pathologistNotes: { type: String },
+    pathologistInterpretation: { type: String },
+    pathologistComments: { type: String },
+    revisionHistory: {
+      type: [
+        {
+          revisionDate: { type: Date, default: Date.now },
+          revisedBy: { type: String, required: true },
+          reason: { type: String, required: true },
+          previousSummary: { type: String },
+          previousInterpretation: { type: String },
+        },
+      ],
+      default: [],
+    },
     results: { type: [LabResultItemSchema], default: [] },
     fileUrl: { type: String },
   },
@@ -124,3 +175,4 @@ const LabReportSchema = new Schema<ILabReport>(
 export const LabReport: Model<ILabReport> =
   mongoose.models.LabReport ||
   mongoose.model<ILabReport>("LabReport", LabReportSchema);
+

@@ -13,3 +13,5 @@ export * from "./NursingAssessment";
 export * from "./NurseTask";
 export * from "./Consultation";
 export * from "./LabSample";
+export * from "./Medicine";
+export * from "./DispensingRecord";
