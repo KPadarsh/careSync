@@ -54,6 +54,22 @@ const DEMO_ACCOUNTS = [
     color: "from-teal-600 to-emerald-700",
   },
   {
+    role: "Billing",
+    name: "Meera Nair",
+    email: "meera@billing.caresync.com",
+    badge: "Billing Specialist",
+    portal: "/billing/dashboard",
+    color: "from-blue-600 to-indigo-700",
+  },
+  {
+    role: "Admin",
+    name: "Alexander Wright",
+    email: "admin@caresync.com",
+    badge: "System Administrator",
+    portal: "/admin/dashboard",
+    color: "from-slate-700 to-slate-900",
+  },
+  {
     role: "Patient",
     name: "Rahul K.",
     email: "rahul@patient.caresync.com",
@@ -124,7 +140,9 @@ export default function AuthenticationPage() {
       // Determine portal route by role
       const role = data.user?.role;
       let targetPath = "/patient/dashboard";
-      if (role === "doctor") targetPath = "/doctor/dashboard";
+      if (role === "admin") targetPath = "/admin/dashboard";
+      else if (role === "doctor") targetPath = "/doctor/dashboard";
+      else if (role === "billing") targetPath = "/billing/dashboard";
       else if (role === "pharmacy") targetPath = "/pharmacy/dashboard";
       else if (role === "pathologist") targetPath = "/pathologist/dashboard";
       else if (role === "lab_technician") targetPath = "/lab/dashboard";

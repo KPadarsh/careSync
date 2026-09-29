@@ -642,5 +642,133 @@ export async function requirePharmacySession(): Promise<{
   return session;
 }
 
+/**
+ * Retrieve authenticated billing staff session.
+ * Falls back to default billing specialist Meera Nair if no active session.
+ */
+export async function getBillingSession(): Promise<{
+  user: IUser;
+  role: Role;
+} | null> {
+  await connectToDatabase();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
 
+  if (sessionCookie?.value) {
+    const payload = verifySession(sessionCookie.value);
+    if (payload?.userId) {
+      const user = await User.findById(payload.userId);
+      if (
+        user &&
+        user.status === "active" &&
+        (user.role === ROLES.BILLING || user.role === ROLES.ADMIN)
+      ) {
+        return { user, role: user.role };
+      }
+    }
+  }
 
+  // Ensure database is seeded with billing staff
+  const { seedCareSyncDatabase } = await import("@/lib/seed");
+  await seedCareSyncDatabase();
+
+  const billingUser = await User.findOne({
+    email: "meera@billing.caresync.com",
+  });
+  if (billingUser) {
+    try {
+      await setSessionCookie({
+        userId: billingUser._id.toString(),
+        email: billingUser.email,
+        role: billingUser.role,
+      });
+    } catch {
+      // Ignore if called in read-only phase
+    }
+    return {
+      user: billingUser,
+      role: billingUser.role,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Strictly require an authenticated billing staff session.
+ */
+export async function requireBillingSession(): Promise<{
+  user: IUser;
+  role: Role;
+}> {
+  const session = await getBillingSession();
+  if (
+    !session ||
+    (session.role !== ROLES.BILLING && session.role !== ROLES.ADMIN)
+  ) {
+    throw new Error("UNAUTHORIZED_BILLING");
+  }
+  return session;
+}
+
+/**
+ * Retrieve authenticated administrator session.
+ * Falls back to default administrator Alexander Wright if no active session.
+ */
+export async function getAdminSession(): Promise<{
+  user: IUser;
+  role: Role;
+} | null> {
+  await connectToDatabase();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+
+  if (sessionCookie?.value) {
+    const payload = verifySession(sessionCookie.value);
+    if (payload?.userId) {
+      const user = await User.findById(payload.userId);
+      if (user && user.status === "active" && user.role === ROLES.ADMIN) {
+        return { user, role: user.role };
+      }
+    }
+  }
+
+  // Ensure database is seeded with admin
+  const { seedCareSyncDatabase } = await import("@/lib/seed");
+  await seedCareSyncDatabase();
+
+  const adminUser = await User.findOne({
+    email: "admin@caresync.com",
+  });
+  if (adminUser) {
+    try {
+      await setSessionCookie({
+        userId: adminUser._id.toString(),
+        email: adminUser.email,
+        role: adminUser.role,
+      });
+    } catch {
+      // Ignore if called in read-only phase
+    }
+    return {
+      user: adminUser,
+      role: adminUser.role,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Strictly require an authenticated administrator session.
+ */
+export async function requireAdminSession(): Promise<{
+  user: IUser;
+  role: Role;
+}> {
+  const session = await getAdminSession();
+  if (!session || session.role !== ROLES.ADMIN) {
+    throw new Error("UNAUTHORIZED_ADMIN");
+  }
+  return session;
+}

@@ -16,6 +16,12 @@ import {
   LabSample,
   Medicine,
   DispensingRecord,
+  Invoice,
+  Payment,
+  Department,
+  Staff,
+  Schedule,
+  AuditLog,
 } from "@/models";
 import { hashPassword } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
@@ -2404,8 +2410,754 @@ export async function seedCareSyncDatabase() {
     }
   }
 
-  console.log("CareSync patient, receptionist, nurse, doctor, lab technician, pathologist, and pharmacy database seeded successfully.");
-  return { patientUser, patientRecord, receptionUser, nurseUser, doctorUser, labTechUser, pathologistUser, pharmacyUser, doctors };
+  // 34. Seed Billing Staff User (Meera Nair)
+  let billingUser = await User.findOne({ email: "meera@billing.caresync.com" });
+  if (!billingUser) {
+    console.log("Seeding billing staff user (Meera Nair)...");
+    billingUser = await User.create({
+      name: "Meera Nair",
+      email: "meera@billing.caresync.com",
+      passwordHash: hashPassword("Password123!"),
+      role: ROLES.BILLING,
+      phone: "+1 (555) 456-7890",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80",
+      status: "active",
+    });
+  }
+
+  // 35. Seed Invoices and Payments (Strictly Financial, No Discharge)
+  const invoiceCount = await Invoice.countDocuments();
+  if (invoiceCount === 0 && primaryPatient && prescribingDoc1) {
+    console.log("Seeding billing invoices and payments...");
+
+    // Invoice 1: Fully Paid
+    const inv1 = await Invoice.create({
+      invoiceNumber: "INV-2026-00101",
+      patientId: primaryPatient._id,
+      doctorId: prescribingDoc2._id,
+      date: new Date(Date.now() - 5 * 24 * 3600 * 1000),
+      dueDate: new Date(Date.now() + 25 * 24 * 3600 * 1000),
+      services: [
+        {
+          serviceName: "Cardiology Specialist Consultation",
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 180,
+          subtotal: 180,
+        },
+        {
+          serviceName: "12-Lead Electrocardiogram (ECG)",
+          category: "procedure",
+          quantity: 1,
+          unitPrice: 70,
+          subtotal: 70,
+        },
+      ],
+      subtotalAmount: 250,
+      discountAmount: 0,
+      taxAmount: 0,
+      totalAmount: 250,
+      paidAmount: 250,
+      balanceAmount: 0,
+      status: "paid",
+      notes: "Routine preventive cardiology assessment. Paid in full via card.",
+      createdByName: "Meera Nair, Billing Specialist",
+    });
+
+    // Payment for Invoice 1
+    await Payment.create({
+      transactionNumber: "TXN-2026-00041",
+      invoiceId: inv1._id,
+      patientId: primaryPatient._id,
+      amount: 250,
+      paymentMethod: "credit_card",
+      referenceNumber: "AUTH-CC-849201",
+      paymentDate: new Date(Date.now() - 5 * 24 * 3600 * 1000),
+      status: "completed",
+      receivedByName: "Meera Nair, Billing Specialist",
+      notes: "Visa ending in 4192. POS Counter 1.",
+    });
+
+    // Invoice 2: Partially Paid
+    const inv2 = await Invoice.create({
+      invoiceNumber: "INV-2026-00102",
+      patientId: secondPatient._id,
+      doctorId: prescribingDoc1._id,
+      date: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      dueDate: new Date(Date.now() + 27 * 24 * 3600 * 1000),
+      services: [
+        {
+          serviceName: "Endocrine & Metabolic Comprehensive Evaluation",
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 200,
+          subtotal: 200,
+        },
+        {
+          serviceName: "Comprehensive Metabolic Panel (CMP 14)",
+          category: "laboratory",
+          quantity: 1,
+          unitPrice: 140,
+          subtotal: 140,
+        },
+        {
+          serviceName: "Metformin 500mg (60 Tabs) Dispensary Order",
+          category: "pharmacy",
+          quantity: 1,
+          unitPrice: 80,
+          subtotal: 80,
+        },
+      ],
+      subtotalAmount: 420,
+      discountAmount: 20,
+      taxAmount: 0,
+      totalAmount: 400,
+      paidAmount: 200,
+      balanceAmount: 200,
+      status: "partially_paid",
+      notes: "Patient copay settled. Remaining $200 awaiting secondary insurance claim adjudication.",
+      createdByName: "Meera Nair, Billing Specialist",
+    });
+
+    // Payment for Invoice 2
+    await Payment.create({
+      transactionNumber: "TXN-2026-00042",
+      invoiceId: inv2._id,
+      patientId: secondPatient._id,
+      amount: 200,
+      paymentMethod: "insurance",
+      referenceNumber: "CLM-BCBS-91823",
+      paymentDate: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      status: "completed",
+      receivedByName: "Meera Nair, Billing Specialist",
+      notes: "Initial insurance copay reimbursement processed.",
+    });
+
+    // Invoice 3: Unpaid / Pending
+    await Invoice.create({
+      invoiceNumber: "INV-2026-00103",
+      patientId: primaryPatient._id,
+      doctorId: prescribingDoc1._id,
+      date: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      dueDate: new Date(Date.now() + 29 * 24 * 3600 * 1000),
+      services: [
+        {
+          serviceName: "General Medical Consultation",
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 120,
+          subtotal: 120,
+        },
+        {
+          serviceName: "Amoxicillin 500mg (21 Caps) Prescription",
+          category: "pharmacy",
+          quantity: 1,
+          unitPrice: 45,
+          subtotal: 45,
+        },
+      ],
+      subtotalAmount: 165,
+      discountAmount: 0,
+      taxAmount: 0,
+      totalAmount: 165,
+      paidAmount: 0,
+      balanceAmount: 165,
+      status: "pending",
+      notes: "Issued upon pharmacy dispensing completion. Due in 30 days.",
+      createdByName: "Meera Nair, Billing Specialist",
+    });
+
+    // Invoice 4: Overdue
+    await Invoice.create({
+      invoiceNumber: "INV-2026-00098",
+      patientId: thirdPatient._id,
+      doctorId: prescribingDoc2._id,
+      date: new Date(Date.now() - 45 * 24 * 3600 * 1000),
+      dueDate: new Date(Date.now() - 15 * 24 * 3600 * 1000), // Past due
+      services: [
+        {
+          serviceName: "Orthopedic Subspecialty Consultation",
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 220,
+          subtotal: 220,
+        },
+        {
+          serviceName: "Knee Joint Bilateral X-Ray Imaging",
+          category: "radiology",
+          quantity: 1,
+          unitPrice: 160,
+          subtotal: 160,
+        },
+      ],
+      subtotalAmount: 380,
+      discountAmount: 0,
+      taxAmount: 0,
+      totalAmount: 380,
+      paidAmount: 0,
+      balanceAmount: 380,
+      status: "overdue",
+      notes: "Payment reminder notification dispatched. Balance past 30-day net terms.",
+      createdByName: "Meera Nair, Billing Specialist",
+    });
+
+    // Invoice 5: Today's New Invoice
+    await Invoice.create({
+      invoiceNumber: "INV-2026-00104",
+      patientId: secondPatient._id,
+      doctorId: prescribingDoc1._id,
+      date: new Date(),
+      dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      services: [
+        {
+          serviceName: "Dermatological Lesion Assessment",
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 150,
+          subtotal: 150,
+        },
+        {
+          serviceName: "Punch Biopsy Clinical Procedure",
+          category: "procedure",
+          quantity: 1,
+          unitPrice: 140,
+          subtotal: 140,
+        },
+      ],
+      subtotalAmount: 290,
+      discountAmount: 0,
+      taxAmount: 0,
+      totalAmount: 290,
+      paidAmount: 0,
+      balanceAmount: 290,
+      status: "pending",
+      notes: "Outpatient clinical billing record generated today.",
+      createdByName: "Meera Nair, Billing Specialist",
+    });
+  }
+
+  // 36. Seed Billing Notifications
+  if (billingUser) {
+    const billingNotifCount = await Notification.countDocuments({
+      recipientId: billingUser._id,
+    });
+    if (billingNotifCount === 0) {
+      console.log("Seeding billing staff notifications...");
+      await Notification.create([
+        {
+          recipientId: billingUser._id,
+          title: "New Outpatient Invoice Generated",
+          message: "Invoice INV-2026-00104 ($290.00) issued for Marcus Chen.",
+          type: "system",
+          link: "/billing/invoices",
+          isRead: false,
+        },
+        {
+          recipientId: billingUser._id,
+          title: "Overdue Account Flagged: INV-2026-00098",
+          message: "Outstanding balance of $380.00 is 15 days past due date.",
+          type: "system",
+          link: "/billing/outstanding",
+          isRead: false,
+        },
+        {
+          recipientId: billingUser._id,
+          title: "Payment Confirmation: $250.00 Settled",
+          message: "Card transaction TXN-2026-00041 completed for Rahul K.",
+          type: "system",
+          link: "/billing/history",
+          isRead: true,
+        },
+      ]);
+    }
+  }
+
+  // 37. Seed Admin User (Alexander Wright)
+  let adminUser = await User.findOne({ email: "admin@caresync.com" });
+  if (!adminUser) {
+    console.log("Seeding administrator user (Alexander Wright)...");
+    adminUser = await User.create({
+      name: "Alexander Wright",
+      email: "admin@caresync.com",
+      passwordHash: hashPassword("Password123!"),
+      role: ROLES.ADMIN,
+      phone: "+1 (555) 901-2244",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80",
+      status: "active",
+    });
+  }
+
+  // 38. Seed Departments
+  const deptCount = await Department.countDocuments();
+  if (deptCount === 0) {
+    console.log("Seeding clinical and administrative departments...");
+    await Department.create([
+      {
+        name: "Cardiology",
+        code: "CARD",
+        description: "Comprehensive cardiovascular diagnostics, electrophysiology, and non-invasive therapy.",
+        headOfDepartment: "Dr. Rajesh Kumar",
+        location: "Building A, 4th Floor, East Wing",
+        phone: "+1 (555) 400-1010",
+        email: "cardiology@caresync.com",
+        operatingHours: { start: "08:00 AM", end: "08:00 PM" },
+        status: "active",
+      },
+      {
+        name: "General Medicine",
+        code: "GENMED",
+        description: "Primary ambulatory outpatient evaluations, chronic disease management, and internal medicine.",
+        headOfDepartment: "Dr. Anjali Menon",
+        location: "Building A, 3rd Floor, Central",
+        phone: "+1 (555) 400-1020",
+        email: "medicine@caresync.com",
+        operatingHours: { start: "08:00 AM", end: "10:00 PM" },
+        status: "active",
+      },
+      {
+        name: "Pediatrics",
+        code: "PED",
+        description: "Neonatal, infant, and adolescent preventative health, vaccinations, and acute care.",
+        headOfDepartment: "Dr. Priya Nair",
+        location: "Building B, 2nd Floor, Pediatric Wing",
+        phone: "+1 (555) 400-1030",
+        email: "pediatrics@caresync.com",
+        operatingHours: { start: "08:30 AM", end: "06:00 PM" },
+        status: "active",
+      },
+      {
+        name: "Orthopedics",
+        code: "ORTHO",
+        description: "Musculoskeletal trauma, joint preservation, sports injuries, and rehabilitation therapy.",
+        headOfDepartment: "Dr. Vikram Rao",
+        location: "Building B, 3rd Floor, West Wing",
+        phone: "+1 (555) 400-1040",
+        email: "orthopedics@caresync.com",
+        operatingHours: { start: "09:00 AM", end: "05:00 PM" },
+        status: "active",
+      },
+      {
+        name: "Dermatology",
+        code: "DERM",
+        description: "Clinical skin pathology, allergy testing, laser interventions, and topical care.",
+        headOfDepartment: "Dr. Sunita Patil",
+        location: "Building A, 2nd Floor, Suite 208",
+        phone: "+1 (555) 400-1050",
+        email: "dermatology@caresync.com",
+        operatingHours: { start: "09:00 AM", end: "05:00 PM" },
+        status: "active",
+      },
+      {
+        name: "Pathology & Laboratory",
+        code: "PATHLAB",
+        description: "Hematology, clinical biochemistry, automated serology, and diagnostic cytology services.",
+        headOfDepartment: "Dr. Sunita Patil",
+        location: "Basement Level 1, Diagnostics Center",
+        phone: "+1 (555) 400-1060",
+        email: "lab.ops@caresync.com",
+        operatingHours: { start: "07:00 AM", end: "11:00 PM" },
+        status: "active",
+      },
+      {
+        name: "Central Pharmacy",
+        code: "PHARM",
+        description: "Hospital formulary dispensing, inventory logistics, medication reconciliation, and patient counseling.",
+        headOfDepartment: "Deepak Varma, RPh",
+        location: "Ground Floor, Main Entrance Atrium",
+        phone: "+1 (555) 400-1070",
+        email: "pharmacy.ops@caresync.com",
+        operatingHours: { start: "00:00 AM", end: "11:59 PM" },
+        status: "active",
+      },
+      {
+        name: "Finance & Accounts",
+        code: "FINANCE",
+        description: "Patient accounting, billing settlement desks, cashier audit reconciliation, and revenue assurance.",
+        headOfDepartment: "Meera Nair",
+        location: "Ground Floor, Cashier Desks 1-4",
+        phone: "+1 (555) 400-1080",
+        email: "billing.ops@caresync.com",
+        operatingHours: { start: "08:00 AM", end: "08:00 PM" },
+        status: "active",
+      },
+    ]);
+  }
+
+  // 39. Seed Staff Profiles
+  const staffCount = await Staff.countDocuments();
+  if (staffCount === 0) {
+    console.log("Seeding staff profiles...");
+    await Staff.create([
+      {
+        employeeId: "STF-2026-001",
+        userId: receptionUser?._id,
+        fullName: "Sarah Adams",
+        email: "sarah@reception.caresync.com",
+        phone: "+1 (555) 123-4567",
+        role: "receptionist",
+        department: "General Medicine",
+        designation: "Lead Receptionist & Triage Coordinator",
+        shift: "Morning (07:30 - 15:30)",
+        status: "active",
+        joinedDate: new Date("2024-03-15"),
+        emergencyContact: "David Adams (+1 555-901-4433)",
+        qualifications: "B.A. Healthcare Admin, Certified Medical Registrar",
+        notes: "Front desk lead supervisor for morning outpatient queues.",
+      },
+      {
+        employeeId: "STF-2026-002",
+        userId: nurseUser?._id,
+        fullName: "Arun Mary",
+        email: "arun.mary@nurse.caresync.com",
+        phone: "+1 (555) 234-5678",
+        role: "nurse",
+        department: "Cardiology",
+        designation: "Senior Clinical Registered Nurse",
+        shift: "Day (08:00 - 16:00)",
+        status: "active",
+        joinedDate: new Date("2023-08-01"),
+        emergencyContact: "Thomas Mary (+1 555-888-1212)",
+        qualifications: "BSN, RN, BLS/ACLS Certified",
+        notes: "Assigned to Cardiology ambulatory clinic and vitals intake.",
+      },
+      {
+        employeeId: "STF-2026-003",
+        userId: labTechUser?._id,
+        fullName: "Vikram Malhotra",
+        email: "vikram@lab.caresync.com",
+        phone: "+1 (555) 678-9012",
+        role: "lab_technician",
+        department: "Pathology & Laboratory",
+        designation: "Senior Medical Laboratory Technician",
+        shift: "Morning (07:00 - 15:00)",
+        status: "active",
+        joinedDate: new Date("2023-11-10"),
+        emergencyContact: "Kavita Malhotra (+1 555-777-3344)",
+        qualifications: "B.Sc Medical Laboratory Technology, MLT (ASCP)",
+        notes: "Specialized in automated hematology & specimen accessioning.",
+      },
+      {
+        employeeId: "STF-2026-004",
+        userId: pathologistUser?._id,
+        fullName: "Dr. Sunita Patil",
+        email: "sunita@pathology.caresync.com",
+        phone: "+1 (555) 890-1234",
+        role: "pathologist",
+        department: "Pathology & Laboratory",
+        designation: "Consultant Clinical Pathologist",
+        shift: "Day (09:00 - 17:00)",
+        status: "active",
+        joinedDate: new Date("2022-05-20"),
+        emergencyContact: "Nikhil Patil (+1 555-444-9090)",
+        qualifications: "MD (Pathology), FRCPath",
+        notes: "Head of diagnostic verification and cytology reviews.",
+      },
+      {
+        employeeId: "STF-2026-005",
+        userId: pharmacyUser?._id,
+        fullName: "Deepak Varma",
+        email: "deepak@pharmacy.caresync.com",
+        phone: "+1 (555) 345-6789",
+        role: "pharmacist",
+        department: "Central Pharmacy",
+        designation: "Chief Pharmacist & Inventory Controller",
+        shift: "Day (08:30 - 17:00)",
+        status: "active",
+        joinedDate: new Date("2023-01-15"),
+        emergencyContact: "Sangeeta Varma (+1 555-222-1100)",
+        qualifications: "Pharm.D, Registered Pharmacist (RPh)",
+        notes: "Oversees formulary dispensing, narcotics cabinet, and inventory safety.",
+      },
+      {
+        employeeId: "STF-2026-006",
+        userId: billingUser?._id,
+        fullName: "Meera Nair",
+        email: "meera@billing.caresync.com",
+        phone: "+1 (555) 456-7890",
+        role: "billing_staff",
+        department: "Finance & Accounts",
+        designation: "Senior Billing Specialist & Cashier",
+        shift: "Morning (08:00 - 16:30)",
+        status: "active",
+        joinedDate: new Date("2024-01-08"),
+        emergencyContact: "Ramesh Nair (+1 555-333-8877)",
+        qualifications: "B.Com, Certified Healthcare Financial Professional (CHFP)",
+        notes: "Cashier Desk B-1 lead for invoices and payment collections.",
+      },
+      {
+        employeeId: "STF-2026-007",
+        fullName: "Karen Scott",
+        email: "karen.scott@nurse.caresync.com",
+        phone: "+1 (555) 890-4411",
+        role: "nurse",
+        department: "Pediatrics",
+        designation: "Pediatric Staff Nurse",
+        shift: "Evening (14:00 - 22:00)",
+        status: "active",
+        joinedDate: new Date("2024-06-01"),
+        emergencyContact: "Mark Scott (+1 555-661-9988)",
+        qualifications: "BSN, Pediatric Advanced Life Support (PALS)",
+        notes: "Staff nurse in pediatric inpatient wing.",
+      },
+      {
+        employeeId: "STF-2026-008",
+        fullName: "Marcus Holloway",
+        email: "marcus.holloway@reception.caresync.com",
+        phone: "+1 (555) 671-8822",
+        role: "receptionist",
+        department: "Orthopedics",
+        designation: "Desk Receptionist",
+        shift: "Afternoon (12:00 - 20:00)",
+        status: "active",
+        joinedDate: new Date("2025-02-15"),
+        emergencyContact: "Elena Holloway (+1 555-223-1199)",
+        qualifications: "Associate Degree in Healthcare Management",
+        notes: "Assists surgical admissions and walk-in check-in desks.",
+      },
+    ]);
+  }
+
+  // 40. Seed Shift Duty Schedules (NOT patient appointments)
+  const scheduleCount = await Schedule.countDocuments();
+  if (scheduleCount === 0) {
+    console.log("Seeding staff and doctor duty rosters (administrative shifts)...");
+    await Schedule.insertMany([
+      {
+        personName: "Dr. Rajesh Kumar",
+        personType: "doctor",
+        role: "Cardiologist",
+        department: "Cardiology",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "09:00 AM",
+        endTime: "01:00 PM",
+        station: "Consultation Suite 405",
+        status: "active",
+        notes: "Outpatient Cardiology clinic roster",
+      },
+      {
+        personName: "Dr. Anjali Menon",
+        personType: "doctor",
+        role: "General Physician",
+        department: "General Medicine",
+        shiftType: "full_day",
+        dayOfWeek: "Monday",
+        startTime: "08:30 AM",
+        endTime: "04:30 PM",
+        station: "Consultation Room 302",
+        status: "active",
+        notes: "General OPD duty roster",
+      },
+      {
+        personName: "Sarah Adams",
+        personType: "staff",
+        role: "Receptionist",
+        department: "General Medicine",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "07:30 AM",
+        endTime: "03:30 PM",
+        station: "Main Front Reception Desk 1",
+        status: "active",
+        notes: "Primary queue registration and patient check-in",
+      },
+      {
+        personName: "Arun Mary",
+        personType: "staff",
+        role: "Registered Nurse",
+        department: "Cardiology",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "08:00 AM",
+        endTime: "04:00 PM",
+        station: "Vitals Triage Station A",
+        status: "active",
+        notes: "Pre-consultation triage and vital assessments",
+      },
+      {
+        personName: "Vikram Malhotra",
+        personType: "staff",
+        role: "Lab Technician",
+        department: "Pathology & Laboratory",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "07:00 AM",
+        endTime: "03:00 PM",
+        station: "Automated Chemistry Station B",
+        status: "active",
+        notes: "Specimen analysis and analyzer calibration",
+      },
+      {
+        personName: "Deepak Varma",
+        personType: "staff",
+        role: "Pharmacist",
+        department: "Central Pharmacy",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "08:30 AM",
+        endTime: "05:00 PM",
+        station: "Dispensing Window 1",
+        status: "active",
+        notes: "Prescription verification and formulary issuance",
+      },
+      {
+        personName: "Meera Nair",
+        personType: "staff",
+        role: "Billing Specialist",
+        department: "Finance & Accounts",
+        shiftType: "morning",
+        dayOfWeek: "Monday",
+        startTime: "08:00 AM",
+        endTime: "04:30 PM",
+        station: "Ground Floor Cashier Desk 1",
+        status: "active",
+        notes: "Payment receipts and cashier register settlement",
+      },
+      {
+        personName: "Dr. Priya Nair",
+        personType: "doctor",
+        role: "Pediatrician",
+        department: "Pediatrics",
+        shiftType: "afternoon",
+        dayOfWeek: "Tuesday",
+        startTime: "01:00 PM",
+        endTime: "06:00 PM",
+        station: "Pediatric Suite 201",
+        status: "scheduled",
+        notes: "Pediatric follow-ups and immunizations",
+      },
+      {
+        personName: "Karen Scott",
+        personType: "staff",
+        role: "Nurse",
+        department: "Pediatrics",
+        shiftType: "evening",
+        dayOfWeek: "Tuesday",
+        startTime: "02:00 PM",
+        endTime: "10:00 PM",
+        station: "Pediatric Inpatient Station",
+        status: "scheduled",
+        notes: "Pediatric ward evening rounds",
+      },
+      {
+        personName: "Dr. Vikram Rao",
+        personType: "doctor",
+        role: "Orthopedic Surgeon",
+        department: "Orthopedics",
+        shiftType: "morning",
+        dayOfWeek: "Wednesday",
+        startTime: "09:00 AM",
+        endTime: "02:00 PM",
+        station: "Surgical Suite 310",
+        status: "scheduled",
+        notes: "Post-op consultations and joint evaluations",
+      },
+    ]);
+  }
+
+  // 41. Seed Initial Server-Side Audit Logs
+  const auditCount = await AuditLog.countDocuments();
+  if (auditCount === 0) {
+    console.log("Seeding system administrative audit logs...");
+    await AuditLog.create([
+      {
+        actor: {
+          name: "Alexander Wright",
+          email: "admin@caresync.com",
+          role: "admin",
+        },
+        action: "SYSTEM_INITIALIZATION",
+        resource: "CareSync Administrative Subsystem",
+        resourceType: "system",
+        ipAddress: "127.0.0.1",
+        userAgent: "CareSync Internal Bootstrap",
+        status: "success",
+        metadata: { version: "2.4.0", environment: "production" },
+      },
+      {
+        actor: {
+          name: "Alexander Wright",
+          email: "admin@caresync.com",
+          role: "admin",
+        },
+        action: "DEPARTMENTS_CONFIGURED",
+        resource: "Clinical Departments (8 units)",
+        resourceType: "department",
+        ipAddress: "192.168.1.10",
+        userAgent: "CareSync Admin Console",
+        status: "success",
+        metadata: { count: 8, status: "active" },
+      },
+      {
+        actor: {
+          name: "Alexander Wright",
+          email: "admin@caresync.com",
+          role: "admin",
+        },
+        action: "STAFF_ROSTER_PUBLISHED",
+        resource: "Weekly Staff Shift Schedule",
+        resourceType: "schedule",
+        ipAddress: "192.168.1.10",
+        userAgent: "CareSync Admin Console",
+        status: "success",
+        metadata: { shifts: 10, weekStarting: "2026-09-28" },
+      },
+      {
+        actor: {
+          name: "Alexander Wright",
+          email: "admin@caresync.com",
+          role: "admin",
+        },
+        action: "SECURITY_POLICY_CHECK",
+        resource: "RBAC Authorization Enforcement",
+        resourceType: "settings",
+        ipAddress: "192.168.1.10",
+        userAgent: "CareSync Security Engine",
+        status: "success",
+        metadata: { rolesEnforced: 9, mfaRequiredForAdmin: true },
+      },
+    ]);
+  }
+
+  // 42. Seed Admin Notifications
+  if (adminUser) {
+    const adminNotifCount = await Notification.countDocuments({
+      recipientId: adminUser._id,
+    });
+    if (adminNotifCount === 0) {
+      console.log("Seeding administrator notifications...");
+      await Notification.create([
+        {
+          recipientId: adminUser._id,
+          title: "System Roster Coverage Confirmed",
+          message: "Weekly staff duty rosters for all 8 departments have been finalized and published.",
+          type: "system",
+          link: "/admin/schedules",
+          isRead: false,
+        },
+        {
+          recipientId: adminUser._id,
+          title: "Scheduled Maintenance Window",
+          message: "Database indexing and security audit checks scheduled for Sunday at 02:00 AM.",
+          type: "system",
+          link: "/admin/settings",
+          isRead: false,
+        },
+        {
+          recipientId: adminUser._id,
+          title: "Security Audit Log Clean",
+          message: "Automated scan verified 100% compliance with strict role separation boundaries.",
+          type: "system",
+          link: "/admin/audit-logs",
+          isRead: true,
+        },
+      ]);
+    }
+  }
+
+  console.log("CareSync full ecosystem including admin, staff, departments, schedules, and audit logs seeded successfully.");
+  return { patientUser, patientRecord, receptionUser, nurseUser, doctorUser, labTechUser, pathologistUser, pharmacyUser, billingUser, adminUser, doctors };
 }
+
 
 
