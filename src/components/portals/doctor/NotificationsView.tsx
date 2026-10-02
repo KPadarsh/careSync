@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   IconBell,
   IconCheckCircle,
-  IconAlertTriangle,
   IconFlask,
   IconUsers,
   IconCalendar,
@@ -15,75 +15,17 @@ import {
   IconCheck,
 } from "./DoctorIcons";
 
-interface NotificationItem {
-  _id: string;
-  title: string;
-  message: string;
-  type: string;
-  link: string;
-  isRead: boolean;
-  createdAt: string;
-}
+import { useNotifications, RealtimeNotification } from "@/hooks/useNotifications";
 
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
   const [filter, setFilter] = useState<"all" | "lab" | "queue" | "followup">("all");
-
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/doctor/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const markAsRead = async (id: string) => {
-    try {
-      const res = await fetch("/api/doctor/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id }),
-      });
-      if (res.ok) {
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
-    } catch (err) {
-      console.error("Error marking notification read:", err);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      const res = await fetch("/api/doctor/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markAll: true }),
-      });
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-        setUnreadCount(0);
-      }
-    } catch (err) {
-      console.error("Error marking all read:", err);
-    }
-  };
 
   const filteredNotifications = notifications.filter((item) => {
     if (filter === "all") return true;
@@ -125,31 +67,31 @@ export function NotificationsView() {
     return `${days}d ago`;
   };
 
-  const getNotificationIcon = (n: NotificationItem) => {
+  const getNotificationIcon = (n: RealtimeNotification) => {
     const title = n.title?.toLowerCase() || "";
     const type = n.type?.toLowerCase() || "";
-    if (title.includes("lab") || type.includes("lab")) {
+    if (title.includes("lab") || type.includes("lab") || title.includes("pathology")) {
       return (
-        <div className="w-10 h-10 rounded-xl bg-error-container text-error flex items-center justify-center shadow-sm">
+        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 border border-purple-200/80 flex items-center justify-center shrink-0">
           <IconFlask className="w-5 h-5" />
         </div>
       );
     }
     if (title.includes("follow") || type.includes("follow")) {
       return (
-        <div className="w-10 h-10 rounded-xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed shadow-sm">
-          <IconCalendar className="w-5 h-5 text-primary" />
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0">
+          <IconCalendar className="w-5 h-5" />
         </div>
       );
     }
     return (
-      <div className="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-primary shadow-sm">
+      <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 border border-sky-200/80 flex items-center justify-center shrink-0">
         <IconUsers className="w-5 h-5" />
       </div>
     );
   };
 
-  const getActionLabel = (n: NotificationItem) => {
+  const getActionLabel = (n: RealtimeNotification) => {
     const title = n.title?.toLowerCase() || "";
     const type = n.type?.toLowerCase() || "";
     if (title.includes("lab") || type.includes("lab")) return "View Lab Report";
@@ -158,145 +100,125 @@ export function NotificationsView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary">
-              <IconBell className="w-4 h-4 text-primary" />
+      <PageHeader
+        title="Notifications"
+        description="Stay updated on verified lab results, nurse triage handoffs, and scheduled follow-ups."
+        badge={
+          unreadCount > 0 ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+              {unreadCount} Unread
             </span>
-            <h1 className="text-2xl font-bold text-on-surface tracking-tight">Notifications</h1>
-            {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary text-white">
-                {unreadCount} unread
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-secondary">
-            Stay updated on verified lab results, nurse triage handoffs, and scheduled follow-ups.
-          </p>
-        </div>
-
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllAsRead}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-variant text-xs font-semibold text-primary transition-colors self-start sm:self-auto"
-          >
-            <IconCheck className="w-4 h-4" />
-            <span>Mark all as read</span>
-          </button>
-        )}
-      </div>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+              All Caught Up
+            </span>
+          )
+        }
+        actions={
+          unreadCount > 0 ? (
+            <button
+              onClick={markAllAsRead}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            >
+              <IconCheck className="w-3.5 h-3.5 text-slate-500" />
+              <span>Mark all as read</span>
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2">
-        <button
-          onClick={() => setFilter("all")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filter === "all"
-              ? "bg-primary text-white shadow-sm"
-              : "bg-white text-secondary hover:text-on-surface border border-outline-variant/30"
-          }`}
-        >
-          All Notifications ({notifications.length})
-        </button>
-        <button
-          onClick={() => setFilter("lab")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filter === "lab"
-              ? "bg-primary text-white shadow-sm"
-              : "bg-white text-secondary hover:text-on-surface border border-outline-variant/30"
-          }`}
-        >
-          Lab Reports
-        </button>
-        <button
-          onClick={() => setFilter("queue")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filter === "queue"
-              ? "bg-primary text-white shadow-sm"
-              : "bg-white text-secondary hover:text-on-surface border border-outline-variant/30"
-          }`}
-        >
-          Queue &amp; Triage
-        </button>
-        <button
-          onClick={() => setFilter("followup")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filter === "followup"
-              ? "bg-primary text-white shadow-sm"
-              : "bg-white text-secondary hover:text-on-surface border border-outline-variant/30"
-          }`}
-        >
-          Follow-ups
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {[
+          { id: "all", label: `All (${notifications.length})` },
+          { id: "lab", label: "Lab Reports" },
+          { id: "queue", label: "Queue & Triage" },
+          { id: "followup", label: "Follow-ups" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setFilter(tab.id as any)}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              filter === tab.id
+                ? "bg-slate-900 text-white shadow-xs"
+                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Notifications List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="py-20 text-center text-sm text-secondary bg-white rounded-xl border border-outline-variant/30">
-            <IconRefresh className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+          <div className="py-20 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200/80">
+            <IconRefresh className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
             Loading notifications...
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="py-20 text-center text-sm text-secondary bg-white rounded-xl border border-outline-variant/30">
-            <IconCheckCircle className="w-8 h-8 mx-auto text-tertiary mb-2" />
-            <p className="font-semibold text-on-surface">You&apos;re all caught up!</p>
-            <p className="text-xs text-secondary mt-1">No pending notifications in this category</p>
+          <div className="py-20 text-center text-sm text-slate-500 bg-white rounded-xl border border-slate-200/80">
+            <IconCheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+            <p className="font-semibold text-slate-900">You&apos;re all caught up!</p>
+            <p className="text-xs text-slate-400 mt-1">No pending notifications in this category</p>
           </div>
         ) : (
-          filteredNotifications.map((item) => (
-            <article
-              key={item._id}
-              onClick={() => {
-                if (!item.isRead) markAsRead(item._id);
-              }}
-              className={`relative flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all shadow-sm gap-4 border cursor-pointer ${
-                item.isRead
-                  ? "bg-white border-outline-variant/30 hover:bg-surface-container-low/40"
-                  : "bg-primary-fixed/10 border-primary/30 hover:bg-primary-fixed/20"
-              }`}
-            >
-              <div className="flex items-start gap-3.5 min-w-0">
-                <div className="relative shrink-0 mt-0.5">
-                  {getNotificationIcon(item)}
-                  {!item.isRead && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-white"></span>
-                  )}
+          filteredNotifications.map((item) => {
+            const notifId = item.id || item._id;
+            return (
+              <article
+                key={notifId}
+                onClick={() => {
+                  if (!item.isRead) markAsRead((notifId || "") as string);
+                }}
+                className={`relative flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all shadow-xs gap-4 border cursor-pointer ${
+                  item.isRead
+                    ? "bg-white border-slate-200/80 hover:bg-slate-50/60"
+                    : "bg-sky-50/60 border-sky-200/80 hover:bg-sky-50"
+                }`}
+              >
+                <div className="flex items-start gap-3.5 min-w-0">
+                  <div className="relative shrink-0 mt-0.5">
+                    {getNotificationIcon(item)}
+                    {!item.isRead && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-white" />
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">{item.title}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 text-[10px] font-semibold uppercase tracking-wider">
+                        {item.type || "Update"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{item.message}</p>
+                    <div className="flex items-center gap-3 pt-0.5 text-slate-400 text-[11px]">
+                      <span className="flex items-center gap-1">
+                        <IconClock className="w-3.5 h-3.5" />
+                        {getTimeAgo(item.createdAt)}
+                      </span>
+                      <span>•</span>
+                      <span>Doctor Portal</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-on-surface">{item.title}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-surface-container text-secondary text-[11px] font-semibold capitalize">
-                      {item.type || "Update"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">{item.message}</p>
-                  <div className="flex items-center gap-3 pt-0.5 text-secondary text-[11px]">
-                    <span className="flex items-center gap-1">
-                      <IconClock className="w-3.5 h-3.5" />
-                      {getTimeAgo(item.createdAt)}
-                    </span>
-                    <span>•</span>
-                    <span>Doctor Portal</span>
-                  </div>
+                <div className="flex items-center gap-2 shrink-0 md:self-center pl-13 md:pl-0">
+                  <Link
+                    href={item.link || "/doctor/dashboard"}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-700 shadow-xs"
+                  >
+                    <span>{getActionLabel(item)}</span>
+                    <IconChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </Link>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 md:self-center pl-13 md:pl-0">
-                <Link
-                  href={item.link || "/doctor/dashboard"}
-                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-surface-container hover:bg-primary hover:text-white transition-colors text-xs font-semibold text-primary shadow-sm"
-                >
-                  <span>{getActionLabel(item)}</span>
-                  <IconChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         )}
       </div>
     </div>

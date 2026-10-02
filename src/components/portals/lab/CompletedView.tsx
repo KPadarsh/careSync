@@ -96,7 +96,7 @@ export const CompletedView: React.FC = () => {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Requisitions submitted to Pathologist Dr. Sunita Patil, MD, and verified diagnostic reports.
+            Requisitions submitted for pathologist review and verified diagnostic reports.
           </p>
         </div>
 
@@ -229,7 +229,7 @@ export const CompletedView: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-xs text-slate-600">
-                      {r.submittedBy || "Vikram Malhotra, MLT"}
+                      {r.submittedBy || "Lab Technician"}
                       {r.submittedForReviewAt && (
                         <span className="block text-[10px] text-slate-400">
                           {new Date(r.submittedForReviewAt).toLocaleDateString()}
@@ -351,8 +351,8 @@ export const CompletedView: React.FC = () => {
                 <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] block mb-2">
                   Analytical Parameters
                 </span>
-                <div className="border border-slate-200 rounded-lg overflow-hidden">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="border border-slate-200 rounded-lg overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse min-w-[500px]">
                     <thead>
                       <tr className="bg-slate-100 text-slate-600 font-bold">
                         <th className="py-2 px-3">Parameter</th>
@@ -408,7 +408,7 @@ export const CompletedView: React.FC = () => {
                     Submitted by Technician
                   </span>
                   <span className="font-semibold text-slate-800">
-                    {selectedReport.submittedBy || "Vikram Malhotra, MLT"}
+                    {selectedReport.submittedBy || "Lab Technician"}
                   </span>
                 </div>
                 <div className="text-right">

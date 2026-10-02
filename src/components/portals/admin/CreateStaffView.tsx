@@ -11,61 +11,63 @@ import {
   AlertTriangleIcon,
 } from "./AdminShell";
 
+interface DeptItem {
+  id: string;
+  name: string;
+}
+
+const DEFAULT_DEPARTMENTS: DeptItem[] = [
+  { id: "6abfd5e021e7d6f542352fe3", name: "General Medicine" },
+  { id: "6aba909427482662dadd448f", name: "Cardiology" },
+  { id: "6abfd5e021e7d6f542352fe4", name: "Pediatrics" },
+  { id: "6abfd5e021e7d6f542352fe5", name: "Orthopedics" },
+  { id: "6abfd5e021e7d6f542352fe6", name: "Dermatology" },
+  { id: "6abfd5e021e7d6f542352fe7", name: "Pathology & Laboratory" },
+  { id: "6abfd5e021e7d6f542352fe8", name: "Central Pharmacy" },
+  { id: "6abfd5e021e7d6f542352fe9", name: "Finance & Accounts" },
+];
+
 export function CreateStaffView() {
   const router = useRouter();
-  const [departments, setDepartments] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<DeptItem[]>(DEFAULT_DEPARTMENTS);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     fullName: "",
     email: "",
     phone: "",
-    role: "nurse",
-    department: "",
+    role: "RECEPTIONIST",
+    department: "General Medicine",
+    departmentId: "6abfd5e021e7d6f542352fe3",
     designation: "",
-    shift: "Morning (08:00 - 16:00)",
+    shift: "Morning (07:00 - 15:00)",
     emergencyContact: "",
     qualifications: "",
     notes: "",
-    password: "Password123!",
+    password: "CareSync2026!",
   });
 
   useEffect(() => {
-    fetch("/api/admin/departments")
+    fetch("/api/admin/departments", { credentials: "same-origin" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.departments?.length > 0) {
-          const names = data.departments.map((d: any) => d.name);
-          setDepartments(names);
-          setForm((f) => ({ ...f, department: names[0] || "General Medicine" }));
-        } else {
-          setDepartments([
-            "Cardiology",
-            "General Medicine",
-            "Pediatrics",
-            "Orthopedics",
-            "Dermatology",
-            "Pathology & Laboratory",
-            "Central Pharmacy",
-            "Finance & Accounts",
-          ]);
-          setForm((f) => ({ ...f, department: "General Medicine" }));
+          const list: DeptItem[] = data.departments.map((d: any) => ({
+            id: d._id?.toString() || d.id || d.name,
+            name: d.name,
+          }));
+          setDepartments(list);
+          const current = list.find((d) => d.name === "General Medicine") || list[0];
+          setForm((prev) => ({
+            ...prev,
+            department: current.name,
+            departmentId: current.id,
+          }));
         }
       })
-      .catch(() => {
-        setDepartments([
-          "Cardiology",
-          "General Medicine",
-          "Pediatrics",
-          "Orthopedics",
-          "Dermatology",
-          "Pathology & Laboratory",
-          "Central Pharmacy",
-          "Finance & Accounts",
-        ]);
-        setForm((f) => ({ ...f, department: "General Medicine" }));
-      });
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,12 +79,16 @@ export function CreateStaffView() {
       const res = await fetch("/api/admin/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(form),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to create staff member");
+        const errorDetail = data.fieldErrors
+          ? Object.entries(data.fieldErrors).map(([k, v]) => `${k}: ${v}`).join(", ")
+          : data.error;
+        throw new Error(errorDetail || "Failed to create staff member");
       }
 
       router.push(`/admin/staff/${data.staff._id}`);
@@ -142,7 +148,7 @@ export function CreateStaffView() {
                   required
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  placeholder="e.g. Arun Mary"
+                  placeholder="e.g. Staff Full Name"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -156,7 +162,7 @@ export function CreateStaffView() {
                   required
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="e.g. arun.mary@nurse.caresync.com"
+                  placeholder="e.g. staff.member@caresync.com"
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -184,13 +190,12 @@ export function CreateStaffView() {
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="receptionist">Receptionist (Front Desk)</option>
-                  <option value="nurse">Nurse (Inpatient & Triage)</option>
-                  <option value="lab_technician">Lab Technician (Clinical Laboratory)</option>
-                  <option value="pathologist">Pathologist (Diagnostic Reviews)</option>
-                  <option value="pharmacist">Pharmacist (Formulary Dispensing)</option>
-                  <option value="billing_staff">Billing Staff (Accounts Receivable)</option>
-                  <option value="administrator">System Administrator</option>
+                  <option value="RECEPTIONIST">Receptionist (Front Desk)</option>
+                  <option value="NURSE">Nurse (Inpatient & Triage)</option>
+                  <option value="LAB_TECHNICIAN">Lab Technician (Clinical Laboratory)</option>
+                  <option value="PATHOLOGIST">Pathologist (Diagnostic Reviews)</option>
+                  <option value="PHARMACIST">Pharmacist (Formulary Dispensing)</option>
+                  <option value="BILLING_STAFF">Billing Staff (Accounts Receivable)</option>
                 </select>
               </div>
             </div>
@@ -209,13 +214,21 @@ export function CreateStaffView() {
                 </label>
                 <select
                   required
-                  value={form.department}
-                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  value={form.departmentId || form.department}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const match = departments.find((d) => d.id === val || d.name === val);
+                    setForm({
+                      ...form,
+                      departmentId: match ? match.id : val,
+                      department: match ? match.name : val,
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                    <option key={d.id} value={d.id}>
+                      {d.name}
                     </option>
                   ))}
                 </select>
@@ -296,6 +309,65 @@ export function CreateStaffView() {
                 placeholder="Special notes, internal station preferences, supervisory details..."
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+          </div>
+
+          {/* Section 4: Security & Login Credentials */}
+          <div className="space-y-4">
+            <div className="text-sm font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Portal Login Credentials
+              </span>
+              <span className="text-xs font-normal text-slate-500">
+                Staff will log in using these credentials
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Assign Account Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="CareSync2026!"
+                    className="w-full px-3 py-2 pr-16 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 transition"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Minimum 8 characters. You can keep the default or enter a custom initial password.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Staff Login Email
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={form.email || "Enter email address above"}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 cursor-not-allowed"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Staff will use their email and this password to sign in at <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700">/login</code>.
+                </p>
+              </div>
             </div>
           </div>
 

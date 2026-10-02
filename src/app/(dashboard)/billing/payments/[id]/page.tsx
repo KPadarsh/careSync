@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { PaymentDetailView } from "@/components/portals/billing";
+import { BillingShell, PaymentDetailView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Payment Receipt | CareSync Financial Operations",
@@ -12,5 +12,9 @@ interface PageProps {
 
 export default async function PaymentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <PaymentDetailView id={id} />;
+  return (
+    <BillingShell>
+      <PaymentDetailView id={id} />
+    </BillingShell>
+  );
 }

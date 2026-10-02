@@ -74,14 +74,14 @@ export function ProfileView() {
         <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="w-24 h-24 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl font-bold text-white shadow-inner flex-shrink-0">
-              AW
+              {(profile?.name || "AD").split(" ").filter(Boolean).map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "AD"}
             </div>
             <div className="text-center sm:text-left">
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mb-2">
                 System Administrator • Root Governance
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                {profile?.name || "Alexander Wright"}
+                {profile?.name || "Administrator"}
               </h1>
               <p className="text-sm text-slate-300 mt-1">
                 {profile?.role || "System Administrator"} • {profile?.department || "Hospital Operations & IT Governance"}
@@ -89,13 +89,13 @@ export function ProfileView() {
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-4 text-xs text-slate-300">
                 <span className="flex items-center gap-1.5">
-                  Email: {profile?.email || "admin@caresync.com"}
+                  Email: {profile?.email || "—"}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  Station: {profile?.station || "Central Hospital Admin Suite 500"}
+                  Station: {profile?.station || "—"}
                 </span>
                 <span className="flex items-center gap-1.5 font-mono">
-                  Badge ID: {profile?.badgeId || "ADM-001"}
+                  Badge ID: {profile?.badgeId || "—"}
                 </span>
               </div>
             </div>
@@ -110,7 +110,7 @@ export function ProfileView() {
               <StaffIcon className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-2xl font-bold text-slate-900 mt-2">
-              {profile?.systemMetrics?.staffManaged || 8}
+              {profile?.systemMetrics?.staffManaged ?? 0}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Personnel records</div>
           </div>
@@ -121,7 +121,7 @@ export function ProfileView() {
               <DoctorsIcon className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="text-2xl font-bold text-slate-900 mt-2">
-              {profile?.systemMetrics?.doctorsManaged || 5}
+              {profile?.systemMetrics?.doctorsManaged ?? 0}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Clinical doctors</div>
           </div>
@@ -132,7 +132,7 @@ export function ProfileView() {
               <DepartmentsIcon className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-2xl font-bold text-slate-900 mt-2">
-              {profile?.systemMetrics?.departmentsManaged || 8}
+              {profile?.systemMetrics?.departmentsManaged ?? 0}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Hospital divisions</div>
           </div>
@@ -143,7 +143,7 @@ export function ProfileView() {
               <AuditLogsIcon className="w-4 h-4 text-purple-600" />
             </div>
             <div className="text-2xl font-bold text-slate-900 mt-2">
-              {profile?.systemMetrics?.auditActionsLogged || 12}
+              {profile?.systemMetrics?.auditActionsLogged ?? 0}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">Actions recorded</div>
           </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   SearchIcon,
   PlusIcon,
@@ -49,7 +50,7 @@ export const LabReportsView: React.FC = () => {
   const [patientsList, setPatientsList] = useState<any[]>([]);
   const [patientId, setPatientId] = useState("");
   const [testName, setTestName] = useState("");
-  const [department, setDepartment] = useState("Cardiology / Clinical Pathology");
+  const [department, setDepartment] = useState("Cardiology Diagnostics");
   const [priority, setPriority] = useState<"routine" | "urgent" | "stat">("routine");
   const [clinicalReason, setClinicalReason] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -140,116 +141,108 @@ export const LabReportsView: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 py-6 max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
       {/* Top Title & Action Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73] text-[11px] uppercase tracking-wider font-semibold">
-              Diagnostic Hub
-            </span>
-            <span className="text-[#bfc7d2]">•</span>
-            <span className="text-[12px] text-[#565e74]">Station 4 Orders</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-            Lab & Reports
-          </h1>
-          <p className="text-[14px] text-[#565e74] mt-0.5">
-            Track requested diagnostic tests, monitor phlebotomy workflows, and review finalized reports.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 self-start sm:self-auto">
+      <PageHeader
+        title="Lab & Reports"
+        description="Track requested diagnostic tests, monitor phlebotomy workflows, and review finalized reports."
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
+            Diagnostic Hub
+          </span>
+        }
+        actions={
           <button
             onClick={() => setNewRequisitionModalOpen(true)}
             type="button"
-            className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#006194] text-white hover:bg-[#007bb9] transition-colors text-[13px] font-semibold shadow-xs"
+            className="flex items-center gap-2 h-9 px-3.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors text-xs font-semibold shadow-xs"
           >
             <PlusIcon className="w-4 h-4" />
             <span>New Lab Requisition</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Summary Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Total Requests */}
-        <div className="p-5 rounded-xl bg-white shadow-xs border border-[#bfc7d2]/30 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-white shadow-xs border border-slate-200/80 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-[#565e74] uppercase tracking-wider font-medium">
+            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
               Total Requests
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-[#0b1c30]">
+              <span className="text-2xl font-bold text-slate-900">
                 {stats.totalRequests}
               </span>
-              <span className="text-[11px] text-[#565e74]">authored</span>
+              <span className="text-xs text-slate-400">authored</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-[#eff4ff] flex items-center justify-center text-[#006194]">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-200/70 flex items-center justify-center shrink-0">
             <LabIcon className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 2: Processing in Lab */}
-        <div className="p-5 rounded-xl bg-white shadow-xs border border-[#bfc7d2]/30 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-white shadow-xs border border-slate-200/80 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-[#565e74] uppercase tracking-wider font-medium">
+            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
               In Lab Analysis
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-[#0b1c30]">
+              <span className="text-2xl font-bold text-slate-900">
                 {stats.inAnalysis}
               </span>
-              <span className="text-[11px] text-[#565e74]">processing</span>
+              <span className="text-xs text-slate-400">processing</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/70 flex items-center justify-center shrink-0">
             <ClockIcon className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 3: Results Ready */}
-        <div className="p-5 rounded-xl bg-white shadow-xs border border-[#bfc7d2]/30 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-white shadow-xs border border-slate-200/80 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-[#006194] uppercase tracking-wider font-semibold">
+            <span className="text-[11px] text-sky-700 uppercase tracking-wider font-semibold">
               Doctor Review
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-[#006194]">
+              <span className="text-2xl font-bold text-sky-700">
                 {stats.resultsReady}
               </span>
-              <span className="text-[11px] text-[#006194]/80 font-medium">awaiting review</span>
+              <span className="text-xs text-sky-600 font-medium">ready</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-[#cce5ff] text-[#006194] flex items-center justify-center font-bold text-[14px]">
-            Rx
+          <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-700 border border-sky-200/70 flex items-center justify-center font-bold text-xs shrink-0">
+            LAB
           </div>
         </div>
 
         {/* Metric 4: Verified Reports */}
-        <div className="p-5 rounded-xl bg-white shadow-xs border border-[#bfc7d2]/30 flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-white shadow-xs border border-slate-200/80 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] text-[#565e74] uppercase tracking-wider font-medium">
+            <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
               Pathologist Verified
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-[#0b1c30]">
+              <span className="text-2xl font-bold text-slate-900">
                 {stats.verified}
               </span>
-              <span className="text-[11px] text-[#00873a] font-medium">signed off</span>
+              <span className="text-xs text-emerald-700 font-medium">signed off</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-[#7ffc97]/40 text-[#006b2c] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200/70 flex items-center justify-center shrink-0">
             <CheckCircleIcon className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Main Table Worksurface */}
-      <div className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 flex flex-col overflow-hidden">
         {/* Filters and Search Toolbar */}
-        <div className="p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-[#bfc7d2]/20">
+        <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
           {/* Status Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {[
@@ -263,10 +256,10 @@ export const LabReportsView: React.FC = () => {
                 key={st.id}
                 type="button"
                 onClick={() => setFilter(st.id)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   filter === st.id
-                    ? "bg-[#006194] text-white"
-                    : "bg-[#eff4ff] text-[#565e74] hover:bg-[#dce9ff]"
+                    ? "bg-slate-900 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
                 }`}
               >
                 {st.label}
@@ -275,7 +268,7 @@ export const LabReportsView: React.FC = () => {
           </div>
 
           <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-72">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#707881]">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <SearchIcon className="w-4 h-4" />
             </div>
             <input
@@ -283,7 +276,7 @@ export const LabReportsView: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search patient, MRN, or test..."
-              className="w-full h-9 pl-9 pr-3 rounded-lg bg-[#eff4ff] text-[13px] text-[#0b1c30] placeholder:text-[#707881] focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#006194] border border-transparent focus:border-[#006194]"
+              className="w-full h-9 pl-9 pr-3 rounded-lg bg-slate-50 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 border border-slate-200 focus:border-blue-500 transition-all"
             />
           </form>
         </div>
@@ -292,49 +285,49 @@ export const LabReportsView: React.FC = () => {
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-[#eff4ff]/60 h-9 border-b border-[#bfc7d2]/20">
-                <th className="px-5 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold">
+              <tr className="bg-slate-50/70 h-9 border-b border-slate-100">
+                <th className="px-5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   Patient
                 </th>
-                <th className="px-4 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold">
+                <th className="px-4 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   Test Ordered
                 </th>
-                <th className="px-4 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold">
+                <th className="px-4 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   Department
                 </th>
-                <th className="px-4 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold">
+                <th className="px-4 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   Status
                 </th>
-                <th className="px-4 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold">
+                <th className="px-4 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   Verified By
                 </th>
-                <th className="px-5 text-[12px] uppercase tracking-wider text-[#565e74] font-semibold text-right">
+                <th className="px-5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold text-right">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#bfc7d2]/20 text-[13px]">
+            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#565e74]">
+                  <td colSpan={6} className="py-14 text-center text-slate-400">
                     Loading lab reports...
                   </td>
                 </tr>
               ) : reports.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#565e74]">
+                  <td colSpan={6} className="py-14 text-center text-slate-400">
                     No lab orders found matching current filter.
                   </td>
                 </tr>
               ) : (
                 reports.map((rep) => (
-                  <tr key={rep._id} className="hover:bg-[#eff4ff]/40 transition-colors h-14">
+                  <tr key={rep._id} className="hover:bg-slate-50/70 transition-colors h-14">
                     <td className="px-5 py-3 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-[#0b1c30]">
+                        <span className="font-semibold text-slate-900">
                           {rep.patient.name}
                         </span>
-                        <span className="text-[11px] text-[#565e74]">
+                        <span className="text-xs text-slate-400">
                           {rep.patient.mrn} • {rep.patient.age}y {rep.patient.gender}
                         </span>
                       </div>
@@ -342,16 +335,16 @@ export const LabReportsView: React.FC = () => {
 
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-[#0b1c30]">
+                        <span className="font-semibold text-slate-900">
                           {rep.testName}
                         </span>
-                        <span className="text-[11px] text-[#565e74]">
+                        <span className="text-xs text-slate-400">
                           Ordered: {new Date(rep.sampleCollectionDate).toLocaleDateString()}
                         </span>
                       </div>
                     </td>
 
-                    <td className="px-4 py-3 whitespace-nowrap text-[#565e74]">
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-600 text-xs">
                       {rep.department}
                     </td>
 
@@ -362,7 +355,7 @@ export const LabReportsView: React.FC = () => {
                           Verified
                         </span>
                       ) : rep.status === "finalized" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73] text-[11px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 text-[11px] font-semibold border border-sky-200">
                           Result Ready
                         </span>
                       ) : (
@@ -373,14 +366,14 @@ export const LabReportsView: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="px-4 py-3 whitespace-nowrap text-[#565e74] text-[12px]">
-                      {rep.verifiedBy}
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
+                      {rep.verifiedBy || "Pending Verification"}
                     </td>
 
                     <td className="px-5 py-3 whitespace-nowrap text-right">
                       <Link
                         href={`/doctor/lab/${rep._id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#eff4ff] hover:bg-[#006194] text-[#006194] hover:text-white transition-all text-[12px] font-semibold"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-900 hover:text-white transition-all text-xs font-semibold text-slate-700"
                       >
                         <span>View Report</span>
                         <ChevronRightIcon className="w-3.5 h-3.5" />
@@ -396,16 +389,16 @@ export const LabReportsView: React.FC = () => {
 
       {/* NEW LAB REQUISITION MODAL */}
       {newRequisitionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-4 border border-[#bfc7d2]/40">
-            <div className="flex items-center justify-between pb-3 border-b border-[#bfc7d2]/30">
-              <h3 className="text-base font-bold text-[#0b1c30]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
                 Create Lab Requisition
               </h3>
               <button
                 type="button"
                 onClick={() => setNewRequisitionModalOpen(false)}
-                className="text-[#565e74] hover:text-[#ba1a1a]"
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -413,13 +406,13 @@ export const LabReportsView: React.FC = () => {
 
             <form onSubmit={handleCreateRequisition} className="flex flex-col gap-3">
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Select Patient *
                 </label>
                 <select
                   value={patientId}
                   onChange={(e) => setPatientId(e.target.value)}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 >
                   {patientsList.map((p) => (
                     <option key={p._id} value={p._id}>
@@ -430,7 +423,7 @@ export const LabReportsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Requested Diagnostic Test *
                 </label>
                 <input
@@ -439,19 +432,19 @@ export const LabReportsView: React.FC = () => {
                   placeholder="e.g. 12-Lead Electrocardiogram (ECG) or High-Sensitivity Troponin I"
                   value={testName}
                   onChange={(e) => setTestName(e.target.value)}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Department
                   </label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[12px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                    className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   >
                     <option value="Cardiology Diagnostics">Cardiology Diagnostics</option>
                     <option value="Clinical Pathology">Clinical Pathology</option>
@@ -460,13 +453,13 @@ export const LabReportsView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Priority
                   </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[12px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                    className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   >
                     <option value="routine">Routine</option>
                     <option value="urgent">Urgent</option>
@@ -476,7 +469,7 @@ export const LabReportsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Clinical Indication / Reason
                 </label>
                 <input
@@ -484,12 +477,12 @@ export const LabReportsView: React.FC = () => {
                   placeholder="e.g. Chest discomfort post-exertion, rule out acute coronary syndrome"
                   value={clinicalReason}
                   onChange={(e) => setClinicalReason(e.target.value)}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Lab Technician Instructions
                 </label>
                 <input
@@ -497,24 +490,24 @@ export const LabReportsView: React.FC = () => {
                   placeholder="e.g. Fasting sample; report critical troponin values immediately"
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-white rounded-lg text-xs sm:text-sm text-slate-900 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#bfc7d2]/30">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setNewRequisitionModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-[12px] text-[#565e74] hover:bg-[#eff4ff]"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-[#006194] hover:bg-[#007bb9]"
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-xs"
                 >
-                  Dispatch to Lab Technician
+                  {submitting ? "Dispatching..." : "Dispatch to Lab Technician"}
                 </button>
               </div>
             </form>

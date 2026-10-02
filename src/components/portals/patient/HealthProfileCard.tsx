@@ -8,10 +8,10 @@ export interface HealthProfileProps {
 }
 
 export function HealthProfileCard({
-  bloodGroup = "O+",
-  age = "32 Years",
-  lastVisit = "Aug 15, 2023",
-  primaryDoctor = "Dr. Anjali Menon",
+  bloodGroup = "—",
+  age = "—",
+  lastVisit = "—",
+  primaryDoctor = "Unassigned",
 }: HealthProfileProps) {
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)]">
@@ -67,12 +67,9 @@ export function HealthProfileCard({
             Primary Doctor
           </span>
           <div className="flex items-center gap-2.5 mt-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-Gtk0N5z9MN1yYWXlEEDTMFGJwyEmVhYNaI40eCaysrKFlNpsfrdoaP1fAf7tU1p8erMRAly_k0Tv2rzmTnsQ-WZpZW-JUtZ29ub0at4NY9K18W_x4zs7KHdPx4xKakBJ0EvMRTRP4q8MVi9cTBx2OJ3IUcAmi9Q6Wpzktgo2yeRyrRmtOI0bkOWaZtW3po3IfjnBRYVe5cS9FUsfvegGMYjKcer6GgZvVOqtK8ENw8RqLUCF9oX1dA"
-              alt="Dr. Anjali Menon mini"
-              className="w-6 h-6 rounded-full object-cover shrink-0"
-            />
+            <div className="w-6 h-6 rounded-full bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+              {primaryDoctor && primaryDoctor !== "Unassigned" ? primaryDoctor.replace("Dr. ", "").slice(0, 2).toUpperCase() : "MD"}
+            </div>
             <span className="text-sm font-medium text-[#0b1c30]">{primaryDoctor}</span>
           </div>
         </div>

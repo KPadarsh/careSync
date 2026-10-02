@@ -49,8 +49,10 @@ export async function GET(
       followUps,
     });
   } catch (error: unknown) {
-    if (error instanceof Error && error.message === "UNAUTHORIZED_RECEPTION") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const err = error as any;
+    const status = err?.statusCode || (err?.message?.includes("Forbidden") ? 403 : err?.message?.includes("Unauthorized") ? 401 : 500);
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: err?.message || "Unauthorized" }, { status });
     }
     console.error("Reception patient detail GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -135,8 +137,10 @@ export async function PATCH(
       patient: updated,
     });
   } catch (error: unknown) {
-    if (error instanceof Error && error.message === "UNAUTHORIZED_RECEPTION") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const err = error as any;
+    const status = err?.statusCode || (err?.message?.includes("Forbidden") ? 403 : err?.message?.includes("Unauthorized") ? 401 : 500);
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: err?.message || "Unauthorized" }, { status });
     }
     console.error("Reception patient PATCH error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

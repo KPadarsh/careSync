@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/db";
-import { requireAdminSession } from "@/lib/auth";
-import { Doctor, User } from "@/models";
-import { logAuditEvent } from "@/lib/audit";
+import { requirePermission, handleAuthError, AuthError } from "@/lib/permissions";
+import { DoctorService } from "@/services/doctor.service";
+import { ServiceError } from "@/services/service.error";
 
 interface RouteProps {
   params: Promise<{ id: string }>;
@@ -10,90 +9,59 @@ interface RouteProps {
 
 export async function GET(req: NextRequest, { params }: RouteProps) {
   try {
-    await requireAdminSession();
-    await connectToDatabase();
-
+    await requirePermission("doctor.view", req);
     const { id } = await params;
-    const doctor = await Doctor.findById(id).populate("userId", "email status role").lean();
 
-    if (!doctor) {
-      return NextResponse.json({ success: false, error: "Doctor not found" }, { status: 404 });
+    const doctor = await DoctorService.getDoctorById(id);
+
+    return NextResponse.json({
+      success: true,
+      doctor,
+    });
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; message?: string };
+    if (error instanceof ServiceError || error instanceof AuthError || err?.statusCode) {
+      return NextResponse.json({ success: false, error: err.message }, { status: err.statusCode || 400 });
     }
-
-    return NextResponse.json({ success: true, doctor });
-  } catch (error: any) {
-    console.error("Error fetching doctor:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to load doctor profile" },
-      { status: 500 }
-    );
+    return handleAuthError(error, "Failed to load doctor profile");
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteProps) {
   try {
-    const session = await requireAdminSession();
-    await connectToDatabase();
-
     const { id } = await params;
     const body = await req.json();
 
-    const doctor = await Doctor.findById(id);
-    if (!doctor) {
-      return NextResponse.json({ success: false, error: "Doctor not found" }, { status: 404 });
+    // Check specific permission if only toggling activation/deactivation
+    let user;
+    if (body.status && Object.keys(body).length === 1) {
+      const norm = String(body.status).toUpperCase();
+      if (norm === "ACTIVE") {
+        user = await requirePermission("doctor.activate", req);
+      } else {
+        user = await requirePermission("doctor.deactivate", req);
+      }
+    } else {
+      user = await requirePermission("doctor.update", req);
     }
 
-    const previousStatus = doctor.status;
-    const previousDepartment = doctor.department;
-
-    if (body.name) doctor.name = body.name.trim();
-    if (body.specialty) doctor.specialty = body.specialty.trim();
-    if (body.department) doctor.department = body.department.trim();
-    if (body.qualification) doctor.qualification = body.qualification.trim();
-    if (body.roomNumber) doctor.roomNumber = body.roomNumber.trim();
-    if (body.availableDays) doctor.availableDays = body.availableDays;
-    if (body.workingHours) doctor.workingHours = body.workingHours;
-    if (body.slotDurationMinutes) doctor.slotDurationMinutes = Number(body.slotDurationMinutes);
-    if (body.status) doctor.status = body.status;
-
-    await doctor.save();
-
-    if (body.status && doctor.userId) {
-      await User.findByIdAndUpdate(doctor.userId, {
-        status: body.status === "active" ? "active" : "inactive",
-      });
-    }
-
-    // Server-side audit log
-    await logAuditEvent({
-      actor: {
-        userId: session.user._id,
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role,
-      },
-      action: body.status && body.status !== previousStatus ? "DOCTOR_STATUS_CHANGED" : "DOCTOR_UPDATED",
-      resource: `${doctor.name} (${doctor.specialty})`,
-      resourceType: "doctor",
-      metadata: {
-        previousStatus,
-        newStatus: doctor.status,
-        previousDepartment,
-        newDepartment: doctor.department,
-        updates: body,
-      },
+    const updated = await DoctorService.updateDoctor(id, body, {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     });
 
     return NextResponse.json({
       success: true,
-      doctor,
+      doctor: updated,
       message: "Doctor profile updated successfully",
     });
-  } catch (error: any) {
-    console.error("Error updating doctor:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to update doctor" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const err = error as { statusCode?: number; message?: string };
+    if (error instanceof ServiceError || error instanceof AuthError || err?.statusCode) {
+      return NextResponse.json({ success: false, error: err.message }, { status: err.statusCode || 400 });
+    }
+    return handleAuthError(error, "Failed to update doctor profile");
   }
 }

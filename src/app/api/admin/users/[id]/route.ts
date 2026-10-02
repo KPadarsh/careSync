@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest, { params }: RouteProps) {
     // 3. Validate role
     if (body.role) {
       const validRoles = Object.values(ROLES);
-      if (!validRoles.includes(body.role as Role)) {
+      if (!(validRoles as string[]).includes(body.role)) {
         return NextResponse.json(
           { success: false, error: `Invalid role specified.` },
           { status: 400 }

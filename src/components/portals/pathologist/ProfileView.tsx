@@ -47,7 +47,7 @@ export function ProfileView() {
       <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5 border-b border-slate-100 pb-6">
           <div className="w-20 h-20 rounded-2xl bg-[#002444] text-[#94f2ef] flex items-center justify-center font-bold text-2xl border border-white/20 shadow-md">
-            SP
+            {(profile.name || "P").split(" ").filter(Boolean).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "P"}
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">

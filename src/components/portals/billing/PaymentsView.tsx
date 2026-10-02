@@ -54,60 +54,60 @@ export function PaymentsView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase font-bold tracking-wider text-emerald-400">
+            <span className="text-xs uppercase font-bold tracking-wider text-emerald-600">
               CASHIER TRANSACTIONS
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Payments & Collections Ledger
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Payments &amp; Collections Ledger
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-500">
             Real-time registry of all settled payments, credit cards, insurance claims, and cash receipts.
           </p>
         </div>
 
         <button
           onClick={fetchPayments}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-xs transition-colors"
         >
-          <RefreshIcon className="w-4 h-4 text-emerald-400" />
+          <RefreshIcon className="w-4 h-4 text-emerald-600" />
           <span>Refresh Transactions</span>
         </button>
       </div>
 
       {/* Summary Chips */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-5 rounded-2xl bg-[#0A1324] border border-slate-800/80 flex items-center justify-between shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
               Total Transactions Logged
             </span>
-            <div className="text-3xl font-extrabold text-white mt-1">
+            <div className="text-3xl font-extrabold text-slate-900 mt-1">
               {payments.length}
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
             <PaymentsIcon className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-[#0A1324] border border-slate-800/80 flex items-center justify-between shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+            <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
               Cumulative Amount Collected
             </span>
-            <div className="text-3xl font-extrabold text-emerald-400 font-mono mt-1">
+            <div className="text-3xl font-extrabold text-emerald-600 font-mono mt-1">
               ${totalCollected.toFixed(2)}
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
             <CheckCircleIcon className="w-6 h-6" />
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#0A1324] border border-slate-800/80 p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-xs">
         <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
           {[
             { id: "all", label: "All Methods" },
@@ -122,8 +122,8 @@ export function PaymentsView() {
               onClick={() => setMethodFilter(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                 methodFilter === tab.id
-                  ? "bg-emerald-600 text-white font-semibold shadow-md shadow-emerald-950/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+                  ? "bg-emerald-600 text-white font-semibold shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
               {tab.label}
@@ -139,12 +139,12 @@ export function PaymentsView() {
               placeholder="Search txn #, patient, ref..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             />
           </div>
           <button
             type="submit"
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition-colors"
           >
             <SearchIcon className="w-4 h-4" />
           </button>
@@ -152,44 +152,44 @@ export function PaymentsView() {
       </div>
 
       {/* Payments Table */}
-      <div className="bg-[#0A1324] border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
         {loading ? (
           <div className="p-12 text-center text-sm text-slate-400">
-            <div className="w-8 h-8 border-3 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
+            <div className="w-8 h-8 border-3 border-emerald-500/20 border-t-emerald-600 rounded-full animate-spin mx-auto mb-2" />
             Loading payment records...
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-sm text-rose-400">{error}</div>
+          <div className="p-8 text-center text-sm text-rose-500">{error}</div>
         ) : payments.length === 0 ? (
-          <div className="p-12 text-center text-sm text-slate-400">
+          <div className="p-12 text-center text-sm text-slate-500">
             No payment transactions found matching filters.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#08101E] text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200/80">
                 <tr>
                   <th className="px-5 py-3.5">Txn #</th>
                   <th className="px-5 py-3.5">Patient Details</th>
                   <th className="px-5 py-3.5">Invoice Reference</th>
                   <th className="px-5 py-3.5">Payment Method</th>
                   <th className="px-5 py-3.5">Auth / Ref #</th>
-                  <th className="px-5 py-3.5">Date & Time</th>
+                  <th className="px-5 py-3.5">Date &amp; Time</th>
                   <th className="px-5 py-3.5">Amount</th>
                   <th className="px-5 py-3.5 text-right">Receipt</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {payments.map((p) => (
-                  <tr key={p._id} className="hover:bg-slate-900/40 transition-colors group">
+                  <tr key={p._id} className="hover:bg-slate-50/70 transition-colors group">
                     <td className="px-5 py-4">
-                      <span className="font-mono font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/50 text-[11px]">
+                      <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
                         {p.transactionNumber}
                       </span>
                     </td>
 
                     <td className="px-5 py-4">
-                      <div className="font-bold text-white group-hover:text-emerald-300 transition-colors text-sm">
+                      <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors text-sm">
                         {p.patientId?.name || "Patient"}
                       </div>
                       <div className="text-[11px] text-slate-400 font-mono">
@@ -201,26 +201,26 @@ export function PaymentsView() {
                       {p.invoiceId ? (
                         <Link
                           href={`/billing/invoices/${p.invoiceId._id}`}
-                          className="font-mono font-semibold text-blue-400 hover:underline"
+                          className="font-mono font-semibold text-blue-600 hover:text-blue-700 hover:underline"
                         >
                           {p.invoiceId.invoiceNumber}
                         </Link>
                       ) : (
-                        <span className="text-slate-500">—</span>
+                        <span className="text-slate-400">—</span>
                       )}
                     </td>
 
                     <td className="px-5 py-4">
-                      <span className="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 capitalize font-medium">
+                      <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 capitalize font-medium">
                         {p.paymentMethod.replace("_", " ")}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4 font-mono text-slate-400 text-[11px]">
+                    <td className="px-5 py-4 font-mono text-slate-500 text-[11px]">
                       {p.referenceNumber || "—"}
                     </td>
 
-                    <td className="px-5 py-4 text-slate-300 font-mono text-[11px]">
+                    <td className="px-5 py-4 text-slate-600 font-mono text-[11px]">
                       {new Date(p.paymentDate || p.createdAt).toLocaleString([], {
                         month: "short",
                         day: "numeric",
@@ -229,14 +229,14 @@ export function PaymentsView() {
                       })}
                     </td>
 
-                    <td className="px-5 py-4 font-mono font-extrabold text-sm text-emerald-400">
+                    <td className="px-5 py-4 font-mono font-extrabold text-sm text-emerald-600">
                       +${p.amount?.toFixed(2)}
                     </td>
 
                     <td className="px-5 py-4 text-right">
                       <Link
                         href={`/billing/payments/${p._id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 hover:text-white font-semibold text-xs transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-semibold text-xs transition-colors"
                       >
                         <span>Receipt</span>
                         <span>→</span>

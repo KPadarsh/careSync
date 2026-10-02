@@ -5,11 +5,11 @@ import { Doctor } from "@/models/Doctor";
 export async function GET() {
   try {
     await connectToDatabase();
-    const doctors = await Doctor.find({ status: "active" }).select(
+    const doctors = await Doctor.find({ status: { $in: ["active", "ACTIVE"] } }).select(
       "name specialty department qualification roomNumber avatar availableDays workingHours slotDurationMinutes"
     );
 
-    const departments = Array.from(new Set(doctors.map((d) => d.department)));
+    const departments = Array.from(new Set(doctors.map((d) => d.department).filter(Boolean)));
 
     return NextResponse.json({
       success: true,

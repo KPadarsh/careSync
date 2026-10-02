@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireReceptionSession } from "@/lib/auth";
-import { Appointment, Doctor, Patient, Queue, Notification } from "@/models";
+import { Appointment, Doctor, Patient, Queue, Notification, User } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 import { Types } from "mongoose";
 
 export async function GET(
@@ -105,6 +107,59 @@ export async function PATCH(
           notes: body.notes || `Checked in by Receptionist ${receptionist.name}`,
         });
       }
+
+      // Notify nurse triage station via NotificationService (MongoDB persistence + Socket.IO delivery)
+      try {
+        await NotificationService.notifyRole("NURSE", {
+          title: "New Patient Ready",
+          message: "A checked-in patient is ready for nursing assessment.",
+          type: "queue",
+          link: "/nurse/queue",
+          relatedResource: {
+            resourceType: "queue",
+            resourceId: queue._id.toString(),
+          },
+        });
+
+        // Also notify assigned doctor of patient arrival
+        const doctorUserId = (appointment.doctorId as any)?.userId;
+        const patientName = (appointment.patientId as any)?.firstName 
+          ? `${(appointment.patientId as any).firstName} ${(appointment.patientId as any).lastName || ""}`.trim()
+          : "Patient";
+        if (doctorUserId) {
+          await NotificationService.createNotification({
+            recipientUserId: doctorUserId,
+            title: `Patient Arrival: ${queue.ticketNumber}`,
+            message: `${patientName} has checked in and is proceeding to nurse triage station.`,
+            type: "queue",
+            link: "/doctor/queue",
+            relatedResource: {
+              resourceType: "queue",
+              resourceId: queue._id.toString(),
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to notify staff of check-in:", notifErr);
+      }
+
+      // Record audit event
+      await logAuditEvent({
+        actor: {
+          userId: receptionist._id,
+          name: receptionist.name,
+          email: receptionist.email,
+          role: receptionist.role,
+        },
+        action: "PATIENT_CHECKED_IN",
+        resource: `Ticket ${queue.ticketNumber} for Patient ${(appointment.patientId as any)?.mrn || "Patient"}`,
+        resourceType: "appointment",
+        metadata: {
+          appointmentId: appointment._id,
+          queueId: queue._id,
+          ticketNumber: queue.ticketNumber,
+        },
+      });
 
       return NextResponse.json({
         success: true,

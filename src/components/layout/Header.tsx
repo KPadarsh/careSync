@@ -21,7 +21,7 @@ export function Header({
 }: HeaderProps) {
   return (
     <header
-      className={`sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur-xs sm:px-6 ${className}`}
+      className={`sticky top-0 z-30 flex h-16 shrink-0 w-full items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${className}`}
     >
       {/* Left: Mobile Toggle & Page Title */}
       <div className="flex items-center gap-3">

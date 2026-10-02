@@ -21,7 +21,8 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Form states
@@ -39,7 +40,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      setError(null);
+      setFetchError(null);
       const res = await fetch(`/api/pathologist/reports/${reportId}`);
       if (!res.ok) throw new Error("Failed to load report for review.");
       const json = await res.json();
@@ -48,7 +49,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
       setComments(json.report.pathologistComments || "");
       setNotes(json.report.pathologistNotes || "");
     } catch (err: any) {
-      setError(err.message || "Failed to load report.");
+      setFetchError(err.message || "Failed to load report.");
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   const handleMarkUnderReview = async () => {
     try {
       setSubmitting(true);
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/pathologist/reports/${reportId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,7 +74,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
       setSuccessMsg(result.message);
       fetchReport();
     } catch (err: any) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +84,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   const handleSaveDraft = async () => {
     try {
       setSubmitting(true);
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/pathologist/reports/${reportId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +99,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
       if (!res.ok) throw new Error(result.error || "Failed to save draft.");
       setSuccessMsg("Draft interpretation saved successfully.");
     } catch (err: any) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -108,13 +109,13 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   const handleRequestCorrection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!correctionReason.trim()) {
-      setError("Please supply a detailed reason for the correction request.");
+      setActionError("Please supply a detailed reason for the correction request.");
       return;
     }
 
     try {
       setSubmitting(true);
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/pathologist/reports/${reportId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +134,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
         router.push("/pathologist/reports");
       }, 1000);
     } catch (err: any) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -142,14 +143,14 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
   // Action: Verify & Finalize
   const handleVerifyAndFinalize = async () => {
     if (!interpretation.trim()) {
-      setError("Clinical diagnostic interpretation is required before final sign-off.");
+      setActionError("Clinical diagnostic interpretation is required before final sign-off.");
       setShowVerifyModal(false);
       return;
     }
 
     try {
       setSubmitting(true);
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/pathologist/reports/${reportId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -169,7 +170,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
         router.push(`/pathologist/verified/${reportId}`);
       }, 900);
     } catch (err: any) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -186,12 +187,12 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
     );
   }
 
-  if (error && !data) {
+  if (fetchError || !data) {
     return (
       <div className="flex-1 p-10 flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-md">
           <p className="text-sm font-bold text-red-800">Requisition Not Accessible</p>
-          <p className="text-xs text-red-600 mt-1">{error}</p>
+          <p className="text-xs text-red-600 mt-1">{fetchError || "Requisition not found."}</p>
           <Link
             href="/pathologist/reports"
             className="mt-4 inline-block px-4 py-2 bg-[#00355f] text-white rounded-xl text-xs font-semibold"
@@ -302,7 +303,19 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
 
             <button
               type="button"
-              onClick={() => setShowVerifyModal(true)}
+              onClick={() => {
+                if (!interpretation.trim()) {
+                  setActionError("Clinical diagnostic interpretation is required below before final sign-off.");
+                  const el = document.getElementById("pathologist-interpretation-textarea");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el.focus();
+                  }
+                  return;
+                }
+                setActionError(null);
+                setShowVerifyModal(true);
+              }}
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-[#006a68] hover:bg-[#005250] text-white text-xs font-bold shadow-md shadow-teal-900/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
@@ -313,10 +326,19 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
         </div>
 
         {/* Notifications / Alerts */}
-        {error && (
-          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-            <AlertTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-            <span>{error}</span>
+        {actionError && (
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start justify-between gap-2 animate-in fade-in">
+            <div className="flex items-start gap-2">
+              <AlertTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <span>{actionError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="text-red-400 hover:text-red-700 font-bold px-1.5"
+            >
+              ×
+            </button>
           </div>
         )}
         {successMsg && (
@@ -468,12 +490,22 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
               Diagnostic Interpretation &amp; Clinical Impression <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="pathologist-interpretation-textarea"
               rows={4}
               required
               value={interpretation}
-              onChange={(e) => setInterpretation(e.target.value)}
+              onChange={(e) => {
+                setInterpretation(e.target.value);
+                if (actionError && e.target.value.trim()) {
+                  setActionError(null);
+                }
+              }}
               placeholder="e.g. Normocytic normochromic anemia with reactive lymphocytosis. Recommend correlation with serum ferritin and iron saturation studies..."
-              className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00355f] focus:bg-white transition-all"
+              className={`w-full p-3.5 bg-slate-50 border rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                actionError && !interpretation.trim()
+                  ? "border-red-400 focus:ring-red-400 ring-2 ring-red-100 bg-red-50/20"
+                  : "border-slate-300 focus:ring-[#00355f]"
+              }`}
             />
           </div>
 
@@ -486,7 +518,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
               rows={2}
               value={comments}
               onChange={(e) => setComments(e.target.value)}
-              placeholder="e.g. Attending physician Dr. Anil Kumar alerted via clinical telephone consult regarding borderline troponin elevation..."
+              placeholder="e.g. Attending physician alerted via clinical telephone consult regarding borderline troponin elevation..."
               className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00355f] focus:bg-white transition-all"
             />
           </div>
@@ -585,7 +617,7 @@ export function ReportReviewView({ reportId }: ReportReviewViewProps) {
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Certify Diagnostic Finding</h3>
-                <p className="text-xs text-slate-500">Legal Medical Sign-off • Dr. Sunita Patil, MD</p>
+                <p className="text-xs text-slate-500">Legal Medical Sign-off • Consultant Pathologist</p>
               </div>
             </div>
 

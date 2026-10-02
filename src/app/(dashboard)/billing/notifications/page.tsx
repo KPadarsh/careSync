@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { NotificationsView } from "@/components/portals/billing";
+import { BillingShell, NotificationsView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Billing Notifications | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function NotificationsPage() {
-  return <NotificationsView />;
+  return (
+    <BillingShell>
+      <NotificationsView />
+    </BillingShell>
+  );
 }

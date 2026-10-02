@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { InvoicesView } from "@/components/portals/billing";
+import { BillingShell, InvoicesView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Invoices | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function InvoicesPage() {
-  return <InvoicesView />;
+  return (
+    <BillingShell>
+      <InvoicesView />
+    </BillingShell>
+  );
 }

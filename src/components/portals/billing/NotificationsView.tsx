@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  BillingShell,
   BellIcon,
   CheckCircle2Icon,
   AlertCircleIcon,
@@ -12,67 +11,17 @@ import {
   RefreshCwIcon,
 } from "./BillingShell";
 
-interface BillingNotification {
-  _id: string;
-  title: string;
-  message: string;
-  type: "payment" | "invoice" | "overdue" | "alert" | "system";
-  isRead: boolean;
-  createdAt: string;
-  link?: string;
-}
+import { useNotifications } from "@/hooks/useNotifications";
 
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState<BillingNotification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    refresh,
+  } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
-
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/billing/notifications");
-      const data = await res.json();
-      if (data.success) {
-        setNotifications(data.notifications || []);
-      }
-    } catch (err) {
-      console.error("Error loading notifications:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const markAllRead = async () => {
-    try {
-      await fetch("/api/billing/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "mark_all_read" }),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch (err) {
-      console.error("Error marking all read:", err);
-    }
-  };
-
-  const markSingleRead = async (id: string) => {
-    try {
-      await fetch("/api/billing/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, action: "mark_read" }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
-    } catch (err) {
-      console.error("Error marking read:", err);
-    }
-  };
 
   const filtered = notifications.filter((n) => {
     if (filter === "unread") return !n.isRead;
@@ -93,8 +42,7 @@ export function NotificationsView() {
   };
 
   return (
-    <BillingShell activeKey="notifications">
-      <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -107,14 +55,14 @@ export function NotificationsView() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => fetchNotifications()}
+              onClick={() => refresh()}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
             >
               <RefreshCwIcon className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </button>
             <button
-              onClick={markAllRead}
+              onClick={markAllAsRead}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
             >
               <CheckCircle2Icon className="w-4 h-4" />
@@ -166,7 +114,7 @@ export function NotificationsView() {
           ) : (
             filtered.map((item) => (
               <div
-                key={item._id}
+                key={item.id || item._id}
                 className={`p-4 sm:p-5 flex items-start gap-4 transition ${
                   item.isRead ? "bg-white opacity-80" : "bg-blue-50/30"
                 }`}
@@ -192,7 +140,7 @@ export function NotificationsView() {
                 </div>
                 {!item.isRead && (
                   <button
-                    onClick={() => markSingleRead(item._id)}
+                    onClick={() => markAsRead((item.id || item._id || "") as string)}
                     title="Mark as read"
                     className="p-1 text-slate-400 hover:text-blue-600 transition flex-shrink-0"
                   >
@@ -204,6 +152,5 @@ export function NotificationsView() {
           )}
         </div>
       </div>
-    </BillingShell>
   );
 }

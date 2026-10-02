@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   IconUser,
   IconCheckCircle,
@@ -9,7 +10,6 @@ import {
   IconBuilding,
   IconShield,
   IconRefresh,
-  IconCheck,
   IconAlertTriangle,
 } from "./DoctorIcons";
 
@@ -23,7 +23,7 @@ interface DoctorProfileData {
   avatar?: string;
   email: string;
   phone: string;
-  workingHours: string;
+  workingHours?: string | { start?: string; end?: string };
   availableDays: string[];
   slotDurationMinutes: number;
   status: string;
@@ -99,7 +99,7 @@ export function ProfileView() {
         setMessage({ type: "error", text: data.error || "Failed to update profile." });
       }
     } catch (err) {
-      setMessage({ type: "error", text: "Network error while saving." });
+      setMessage({ type: "error", text: "Network error while saving profile." });
     } finally {
       setSaving(false);
     }
@@ -144,46 +144,57 @@ export function ProfileView() {
     }
   };
 
+  const formatWorkingHours = (wh?: string | { start?: string; end?: string }): string => {
+    if (!wh) return "09:00 AM - 05:00 PM";
+    if (typeof wh === "string") return wh;
+    return `${wh.start || "09:00 AM"} - ${wh.end || "05:00 PM"}`;
+  };
+
   if (loading) {
     return (
-      <div className="py-24 text-center text-sm text-secondary bg-white rounded-xl border border-outline-variant/30">
-        <IconRefresh className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
-        Loading clinical profile...
+      <div className="w-full max-w-7xl mx-auto p-12 flex flex-col items-center justify-center min-h-[50vh]">
+        <IconRefresh className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+        <span className="text-sm font-medium text-slate-500">Loading doctor profile...</span>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-on-surface tracking-tight">Doctor Profile</h1>
-        <p className="text-sm text-secondary">
-          Manage your personal medical credentials, consultation room assignments, and account security.
-        </p>
-      </div>
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
+      {/* Top Header */}
+      <PageHeader
+        title="Doctor Profile"
+        description="Manage your clinical credentials, consultation room assignments, and account security."
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            Active Clinical Staff
+          </span>
+        }
+      />
 
+      {/* Alert Messages */}
       {message && (
         <div
-          className={`p-4 rounded-xl flex items-center gap-3 border ${
+          className={`p-3.5 rounded-xl flex items-center gap-3 border text-xs sm:text-sm font-medium ${
             message.type === "success"
-              ? "bg-tertiary-fixed/30 border-tertiary-fixed text-on-tertiary-fixed"
-              : "bg-error-container border-error/30 text-error"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
           {message.type === "success" ? (
-            <IconCheckCircle className="w-5 h-5 shrink-0 text-tertiary" />
+            <IconCheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           ) : (
-            <IconAlertTriangle className="w-5 h-5 shrink-0 text-error" />
+            <IconAlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
           )}
-          <span className="text-sm font-medium">{message.text}</span>
+          <span>{message.text}</span>
         </div>
       )}
 
-      {/* Main Profile Header Card */}
-      <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="w-20 h-20 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-2xl shadow-md ring-4 ring-primary/10">
+      {/* Profile Overview Card */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4 sm:gap-5">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#00355f] to-[#006a68] text-white flex items-center justify-center font-bold text-2xl shadow-md ring-4 ring-slate-100">
             {profile?.name
               ? profile.name
                   .replace("Dr.", "")
@@ -195,124 +206,125 @@ export function ProfileView() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-on-surface">{profile?.name || "Dr. Anil Kumar"}</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-tertiary-fixed/40 text-tertiary flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+              <h2 className="text-xl font-bold text-slate-900">{profile?.name || "Doctor"}</h2>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                 On Duty
               </span>
             </div>
-            <p className="text-sm font-medium text-primary mt-0.5">
+            <p className="text-xs sm:text-sm font-medium text-slate-600 mt-0.5">
               {profile?.specialty || "Internal Medicine"} • {profile?.department || "General Medicine"}
             </p>
-            <p className="text-xs text-secondary mt-1 font-mono">
+            <p className="text-[11px] text-slate-400 mt-1 font-mono">
               CareSync License: #LIC-2026-9812 • Room: {roomNumber}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/30">
+        <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200/70">
           <div>
-            <p className="text-[11px] text-secondary font-medium">Slot Duration</p>
-            <p className="text-sm font-bold text-on-surface">{profile?.slotDurationMinutes || 30} mins</p>
+            <p className="text-[11px] text-slate-500 font-medium">Slot Duration</p>
+            <p className="text-xs sm:text-sm font-bold text-slate-900">{profile?.slotDurationMinutes || 30} mins</p>
           </div>
-          <div className="h-8 w-px bg-outline-variant/40"></div>
+          <div className="h-8 w-px bg-slate-200" />
           <div>
-            <p className="text-[11px] text-secondary font-medium">Consultation Shift</p>
-            <p className="text-sm font-bold text-on-surface">{profile?.workingHours || "09:00 - 17:00"}</p>
+            <p className="text-[11px] text-slate-500 font-medium">Consultation Shift</p>
+            <p className="text-xs sm:text-sm font-bold text-slate-900">{formatWorkingHours(profile?.workingHours)}</p>
           </div>
         </div>
       </div>
 
+      {/* Main 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: Edit Profile Form */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-outline-variant/30 shadow-sm p-6 space-y-6">
-          <div className="border-b border-outline-variant/30 pb-3 flex items-center gap-2">
-            <IconUser className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-on-surface">Clinical Credentials &amp; Contact</h3>
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 space-y-5">
+          <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <IconUser className="w-4 h-4 text-blue-600" />
+            <h3 className="font-semibold text-sm text-slate-900">Clinical Credentials &amp; Contact</h3>
           </div>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-secondary mb-1">Full Legal Name</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Legal Name</label>
                 <input
                   type="text"
                   value={profile?.name || ""}
                   disabled
-                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm text-secondary cursor-not-allowed"
+                  className="w-full h-9 px-3 bg-slate-100/70 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-500 cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-secondary mb-1">Medical Specialty</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Medical Specialty</label>
                 <input
                   type="text"
                   value={profile?.specialty || ""}
                   disabled
-                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm text-secondary cursor-not-allowed"
+                  className="w-full h-9 px-3 bg-slate-100/70 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-500 cursor-not-allowed"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-secondary mb-1">Clinic Email Address</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Clinic Email Address</label>
                 <input
                   type="email"
                   value={profile?.email || ""}
                   disabled
-                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm text-secondary cursor-not-allowed"
+                  className="w-full h-9 px-3 bg-slate-100/70 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-500 cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1">Phone / Pager Extension</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Phone / Pager Extension</label>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+1 (555) 018-4921"
-                  className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1">Assigned Consultation Room</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned Consultation Room</label>
                 <input
                   type="text"
                   value={roomNumber}
                   onChange={(e) => setRoomNumber(e.target.value)}
                   placeholder="Room 302"
-                  className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1">Qualifications &amp; Degrees</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Qualifications &amp; Degrees</label>
                 <input
                   type="text"
                   value={qualification}
                   onChange={(e) => setQualification(e.target.value)}
                   placeholder="MBBS, MD (Internal Medicine)"
-                  className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
 
-            <div className="p-3 bg-surface-container-low rounded-lg text-xs text-secondary flex items-start gap-2">
-              <IconShield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="p-3 bg-slate-50 rounded-lg text-xs text-slate-600 flex items-start gap-2 border border-slate-200/60">
+              <IconShield className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <span>
                 To modify legal name or medical licenses, contact Clinic Administration or Healthcare Credentialing.
               </span>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-1">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary-container disabled:opacity-50 transition-colors shadow-sm"
+                className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-xs"
               >
                 {saving ? "Saving Changes..." : "Save Profile Details"}
               </button>
@@ -321,66 +333,66 @@ export function ProfileView() {
         </div>
 
         {/* Right 1 Col: Security & Password */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm p-6 space-y-5">
-          <div className="border-b border-outline-variant/30 pb-3 flex items-center gap-2">
-            <IconLock className="w-5 h-5 text-secondary" />
-            <h3 className="font-semibold text-on-surface">Security &amp; Password</h3>
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-6 space-y-4">
+          <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <IconLock className="w-4 h-4 text-slate-500" />
+            <h3 className="font-semibold text-sm text-slate-900">Security &amp; Password</h3>
           </div>
 
-          <form onSubmit={handleChangePassword} className="space-y-4">
+          <form onSubmit={handleChangePassword} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-semibold text-on-surface mb-1">Current Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>
               <input
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-on-surface mb-1">New Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-on-surface mb-1">Confirm New Password</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full h-10 px-3 bg-white border border-outline-variant/50 rounded-lg text-sm text-on-surface focus:outline-none focus:border-primary"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <button
               type="submit"
               disabled={pwdSaving}
-              className="w-full py-2.5 rounded-lg bg-surface-container hover:bg-surface-variant text-primary text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm"
+              className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-semibold disabled:opacity-50 transition-colors shadow-xs"
             >
               {pwdSaving ? "Updating Password..." : "Update Password"}
             </button>
           </form>
 
-          <div className="pt-4 border-t border-outline-variant/30 text-xs text-secondary space-y-2">
+          <div className="pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1.5">
             <div className="flex items-center justify-between">
               <span>Two-Factor Authentication</span>
-              <span className="text-tertiary font-semibold">Enabled (SMS)</span>
+              <span className="text-emerald-700 font-semibold">Enabled</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Last Login</span>
-              <span className="font-mono">Today, 08:30 AM</span>
+              <span className="font-mono text-[11px] text-slate-600">Today, 08:30 AM</span>
             </div>
           </div>
         </div>

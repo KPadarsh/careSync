@@ -221,10 +221,12 @@ export const VitalsRecordingView: React.FC<VitalsRecordingProps> = ({ patientId 
             <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
               Previous Baseline Summary
             </span>
-            <span className="text-slate-400 text-xs">• Recorded today by Arun Mary, RN</span>
+            <span className="text-slate-400 text-xs">
+              {data?.currentVitals?.recordedBy ? `• Recorded by ${data.currentVitals.recordedBy}` : "• Baseline Record"}
+            </span>
           </div>
           <span className="text-xs font-bold text-[#006a61] uppercase tracking-wider">
-            Baseline Active
+            {data?.currentVitals ? "Baseline Active" : "No Baseline"}
           </span>
         </div>
 
@@ -232,46 +234,56 @@ export const VitalsRecordingView: React.FC<VitalsRecordingProps> = ({ patientId 
           <div className="bg-white rounded-lg p-3 shadow-2xs border border-slate-200/60">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Blood Pressure</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.bloodPressure || "120/80"}</span>
+              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.bloodPressure || "—"}</span>
               <span className="text-[10px] text-slate-400">mmHg</span>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium mt-1 block">Normal Range</span>
+            <span className="text-[11px] text-teal-700 font-medium mt-1 block">
+              {data?.currentVitals?.bloodPressure ? "Recorded" : "Not recorded"}
+            </span>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-2xs border border-slate-200/60">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Heart Rate</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.heartRate || 72}</span>
+              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.heartRate || "—"}</span>
               <span className="text-[10px] text-slate-400">bpm</span>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium mt-1 block">Regular</span>
+            <span className="text-[11px] text-teal-700 font-medium mt-1 block">
+              {data?.currentVitals?.heartRate ? "Recorded" : "Not recorded"}
+            </span>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-2xs border border-slate-200/60">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Temperature</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.temperature || 98.6}</span>
+              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.temperature || "—"}</span>
               <span className="text-[10px] text-slate-400">°F</span>
             </div>
-            <span className="text-[11px] text-slate-600 font-medium mt-1 block">Afebrile (Oral)</span>
+            <span className="text-[11px] text-slate-600 font-medium mt-1 block">
+              {data?.currentVitals?.temperature ? "Recorded" : "Not recorded"}
+            </span>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-2xs border border-slate-200/60">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Oxygen SpO2</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.oxygenSaturation || 98}</span>
+              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.oxygenSaturation || "—"}</span>
               <span className="text-[10px] text-slate-400">%</span>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium mt-1 block">Optimal Room Air</span>
+            <span className="text-[11px] text-teal-700 font-medium mt-1 block">
+              {data?.currentVitals?.oxygenSaturation ? "Recorded" : "Not recorded"}
+            </span>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-2xs border border-slate-200/60 col-span-2 sm:col-span-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Respiratory Rate</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.respiratoryRate || 16}</span>
+              <span className="text-lg font-bold text-slate-900">{data?.currentVitals?.respiratoryRate || "—"}</span>
               <span className="text-[10px] text-slate-400">/min</span>
             </div>
-            <span className="text-[11px] text-teal-700 font-medium mt-1 block">Eupneic</span>
+            <span className="text-[11px] text-teal-700 font-medium mt-1 block">
+              {data?.currentVitals?.respiratoryRate ? "Recorded" : "Not recorded"}
+            </span>
           </div>
         </div>
       </div>
@@ -487,7 +499,7 @@ export const VitalsRecordingView: React.FC<VitalsRecordingProps> = ({ patientId 
                         <span>Temp: {v.temperature || 98.6}°F</span>
                       </div>
                       <span className="text-[10px] text-slate-400 mt-1">
-                        Logged by: {h.nurseName || "Arun Mary, RN"}
+                        Logged by: {h.nurseName || "Staff Nurse"}
                       </span>
                     </div>
                   );

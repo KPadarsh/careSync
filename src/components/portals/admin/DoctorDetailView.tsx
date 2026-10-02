@@ -34,7 +34,15 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
     startTime: "",
     endTime: "",
     slotDurationMinutes: 30,
+    password: "",
   });
+
+  // Manual Password Assignment State
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const fetchDoctor = async () => {
     setLoading(true);
@@ -55,6 +63,7 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
         startTime: data.doctor.workingHours?.start || "09:00 AM",
         endTime: data.doctor.workingHours?.end || "05:00 PM",
         slotDurationMinutes: data.doctor.slotDurationMinutes || 30,
+        password: "",
       });
     } catch (err: any) {
       setError(err.message || "Failed to load doctor profile");
@@ -80,41 +89,84 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
       if (data.success) {
         setDoctor(data.doctor);
         setSuccess(`Doctor status updated to ${newStatus}`);
+        setError(null);
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || "Failed to update doctor status");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating status:", err);
+      setError(err.message || "Failed to update status");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+    setResettingPassword(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    try {
+      const res = await fetch(`/api/admin/doctors/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update doctor password");
+      }
+      setPasswordSuccess("Doctor password updated successfully. Active sessions revoked.");
+      setNewPassword("");
+      setTimeout(() => setPasswordSuccess(null), 5000);
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to reset password");
+    } finally {
+      setResettingPassword(false);
     }
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload: Record<string, any> = {
+        name: editForm.name,
+        specialty: editForm.specialty,
+        department: editForm.department,
+        qualification: editForm.qualification,
+        roomNumber: editForm.roomNumber,
+        workingHours: {
+          start: editForm.startTime,
+          end: editForm.endTime,
+        },
+        slotDurationMinutes: editForm.slotDurationMinutes,
+      };
+      if (editForm.password) {
+        payload.password = editForm.password;
+      }
+
       const res = await fetch(`/api/admin/doctors/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editForm.name,
-          specialty: editForm.specialty,
-          department: editForm.department,
-          qualification: editForm.qualification,
-          roomNumber: editForm.roomNumber,
-          workingHours: {
-            start: editForm.startTime,
-            end: editForm.endTime,
-          },
-          slotDurationMinutes: editForm.slotDurationMinutes,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
         setDoctor(data.doctor);
         setIsEditing(false);
         setSuccess("Doctor profile updated successfully");
+        setError(null);
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || "Failed to update doctor profile");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving doctor edits:", err);
+      setError(err.message || "Failed to save edits");
     }
   };
 
@@ -182,6 +234,13 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
           <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-sm">
             <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
             <span>{success}</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-sm">
+            <AlertTriangleIcon className="w-4 h-4 text-rose-600" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -319,6 +378,22 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Reset Account Password (Optional)
+              </label>
+              <input
+                type="text"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Leave blank to keep existing password unchanged"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Enter at least 8 characters if you wish to reset this physician's password now.
+              </span>
+            </div>
+
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
@@ -383,6 +458,73 @@ export function DoctorDetailView({ id }: DoctorDetailViewProps) {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Account Access & Password Management Card */}
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  Account Security & Login Password
+                </h2>
+                <span className="text-xs text-slate-500 font-medium">
+                  Admin Manual Password Assignment
+                </span>
+              </div>
+
+              {passwordSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 text-xs">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{passwordSuccess}</span>
+                </div>
+              )}
+
+              {passwordError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 text-rose-800 text-xs">
+                  <AlertTriangleIcon className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div className="text-xs space-y-1.5 text-slate-600">
+                  <p>
+                    <strong>Doctor Login Email:</strong> <span className="font-mono text-slate-800">{doctor.email}</span>
+                  </p>
+                  <p>
+                    Admin can directly assign or reset the password for this physician at any time. When updated, active sessions will be terminated and the doctor can immediately log in with the new password.
+                  </p>
+                </div>
+
+                <form onSubmit={handleResetPassword} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                  <div className="relative w-full sm:w-64">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 8)..."
+                      className="w-full px-3 py-2 pr-16 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-500 hover:text-slate-800 px-1 py-0.5"
+                    >
+                      {showNewPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={resettingPassword || !newPassword}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold whitespace-nowrap transition shadow-sm"
+                  >
+                    {resettingPassword ? "Updating..." : "Set New Password"}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

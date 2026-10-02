@@ -80,12 +80,12 @@ export async function GET(request: NextRequest) {
           mrn: r.patientId?.mrn || "MRN-N/A",
           age,
           gender: r.patientId?.gender || "unknown",
-          bloodGroup: r.patientId?.bloodGroup || "O+",
+          bloodGroup: r.patientId?.bloodGroup || "—",
           avatar: r.patientId?.userId?.avatar,
         },
         doctor: {
           _id: r.doctorId?._id?.toString(),
-          name: r.doctorId?.name || "Dr. Anil Kumar",
+          name: r.doctorId?.name || "Ordering Physician",
           specialty: r.doctorId?.specialty || "General Medicine",
         },
       };
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
         `${a.patientId?.firstName || ""} ${a.patientId?.lastName || ""}`.trim() ||
         "Patient",
       mrn: a.patientId?.mrn || "MRN-N/A",
-      doctorName: a.doctorId?.name || "Dr. Anil Kumar",
+      doctorName: a.doctorId?.name || "Ordering Physician",
     }));
 
     return NextResponse.json({
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       activeSamples: formattedSamples,
       pendingSubmissions: formattedAwaiting,
       technician: {
-        name: technicianUser.name || "Vikram Malhotra",
+        name: technicianUser.name || "Lab Technician",
         email: technicianUser.email,
         station: "Central Diagnostic Lab • Station 2",
         role: "Medical Laboratory Technologist (MLT)",

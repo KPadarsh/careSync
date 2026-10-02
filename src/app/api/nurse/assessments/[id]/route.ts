@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireNurseSession } from "@/lib/auth";
-import { Patient, Queue, NursingAssessment, Doctor } from "@/models";
+import { Patient, Queue, NursingAssessment, Doctor, Notification } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 import mongoose from "mongoose";
 
 export async function GET(
@@ -130,7 +132,10 @@ export async function POST(
       });
     }
 
-    const isFinalizing = status === "completed";
+    const isFinalizing =
+      status === "completed" ||
+      body.action === "complete" ||
+      body.action === "finalize";
 
     let assessmentDoc: any;
 
@@ -206,6 +211,57 @@ export async function POST(
           activeQueue.priority = triagePriority;
         }
         await activeQueue.save();
+
+        // Notify assigned doctor via NotificationService
+        try {
+          const doctorDoc = await Doctor.findById(activeQueue.doctorId);
+          const patientUser = (patient as any)?.userId?.name || `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Patient";
+          if (doctorDoc?.userId) {
+            await NotificationService.createNotification({
+              recipientUserId: doctorDoc.userId,
+              title: `Patient Ready in Queue (${activeQueue.ticketNumber})`,
+              message: `${patientUser} completed triage vitals and is ready for consultation. Priority: ${activeQueue.priority}.`,
+              type: "queue",
+              link: "/doctor/queue",
+              relatedResource: {
+                resourceType: "queue",
+                resourceId: activeQueue._id.toString(),
+              },
+            });
+          } else {
+            await NotificationService.notifyRole("DOCTOR", {
+              title: `Patient Ready in Queue (${activeQueue.ticketNumber})`,
+              message: `${patientUser} completed triage vitals and is ready for consultation. Priority: ${activeQueue.priority}.`,
+              type: "queue",
+              link: "/doctor/queue",
+              relatedResource: {
+                resourceType: "queue",
+                resourceId: activeQueue._id.toString(),
+              },
+            });
+          }
+        } catch (notifErr) {
+          console.error("Failed to notify doctor:", notifErr);
+        }
+
+        // Record audit event
+        await logAuditEvent({
+          actor: {
+            userId: session.user._id,
+            name: session.user.name,
+            email: session.user.email,
+            role: session.user.role,
+          },
+          action: "NURSING_ASSESSMENT_COMPLETED",
+          resource: `Assessment for Patient ${patient.mrn} (Ready for Doctor)`,
+          resourceType: "nursing",
+          metadata: {
+            patientId: patient._id,
+            queueId: activeQueue._id,
+            priority: activeQueue.priority,
+            condition,
+          },
+        });
       } else if (activeQueue.status === "waiting") {
         activeQueue.status = "in-assessment";
         await activeQueue.save();

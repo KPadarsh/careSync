@@ -1,5 +1,5 @@
 import { connectToDatabase } from "@/lib/db";
-import { AuditLog } from "@/models/AuditLog";
+import { AuditLog, AuditResourceType } from "@/models/AuditLog";
 
 export interface LogAuditOptions {
   actor?: {
@@ -10,7 +10,7 @@ export interface LogAuditOptions {
   };
   action: string;
   resource: string;
-  resourceType: "staff" | "doctor" | "department" | "schedule" | "user" | "settings" | "system";
+  resourceType: AuditResourceType;
   ipAddress?: string;
   userAgent?: string;
   status?: "success" | "warning" | "failure";
@@ -39,3 +39,5 @@ export async function logAuditEvent(options: LogAuditOptions) {
     console.error("Failed to write audit log:", err);
   }
 }
+
+export const logAudit = logAuditEvent;

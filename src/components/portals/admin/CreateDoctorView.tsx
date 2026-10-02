@@ -15,20 +15,21 @@ export function CreateDoctorView() {
   const router = useRouter();
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
     email: "",
-    specialty: "",
-    department: "",
+    specialty: "General Medicine",
+    department: "General Medicine",
     qualification: "MD, MBBS",
     roomNumber: "Consultation Suite 300",
     availableDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     startTime: "09:00 AM",
     endTime: "05:00 PM",
     slotDurationMinutes: 30,
-    password: "Password123!",
+    password: "Doctor123!",
   });
 
   const allWeekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -40,17 +41,15 @@ export function CreateDoctorView() {
         if (data.success && data.departments?.length > 0) {
           const names = data.departments.map((d: any) => d.name);
           setDepartments(names);
-          setForm((f) => ({ ...f, department: names[0] || "General Medicine" }));
+          setForm((f) => ({ ...f, department: f.department || names[0] || "General Medicine" }));
         } else {
           const fallback = ["Cardiology", "General Medicine", "Pediatrics", "Orthopedics", "Dermatology"];
           setDepartments(fallback);
-          setForm((f) => ({ ...f, department: fallback[0] }));
         }
       })
       .catch(() => {
         const fallback = ["Cardiology", "General Medicine", "Pediatrics", "Orthopedics", "Dermatology"];
         setDepartments(fallback);
-        setForm((f) => ({ ...f, department: fallback[0] }));
       });
   }, []);
 
@@ -75,7 +74,7 @@ export function CreateDoctorView() {
       const payload = {
         name: form.name.trim(),
         email: form.email.trim(),
-        specialty: form.specialty.trim(),
+        specialty: form.specialty.trim() || form.department.trim(),
         department: form.department.trim(),
         qualification: form.qualification.trim(),
         roomNumber: form.roomNumber.trim(),
@@ -91,6 +90,7 @@ export function CreateDoctorView() {
       const res = await fetch("/api/admin/doctors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify(payload),
       });
 
@@ -302,6 +302,65 @@ export function CreateDoctorView() {
                   onChange={(e) => setForm({ ...form, slotDurationMinutes: parseInt(e.target.value) || 30 })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Physician Login Credentials & Password Assignment */}
+          <div className="space-y-4">
+            <div className="text-sm font-bold text-slate-900 pb-2 border-b border-slate-100 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Doctor Portal Login Credentials
+              </span>
+              <span className="text-xs font-normal text-slate-500">
+                Doctor will log in using these credentials
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Assign Account Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="Doctor123!"
+                    className="w-full px-3 py-2 pr-16 border border-slate-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 transition"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Minimum 8 characters. Admin can manually assign any custom password.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                  Doctor Login Email
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={form.email || "Enter doctor email above"}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 cursor-not-allowed"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Doctor will use their email and this password to sign in at <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-700">/login</code>.
+                </p>
               </div>
             </div>
           </div>

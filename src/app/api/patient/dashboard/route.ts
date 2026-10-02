@@ -9,6 +9,7 @@ import {
   FollowUp,
   Notification,
   Doctor,
+  Invoice,
 } from "@/models";
 
 interface PopulatedDoctor {
@@ -112,15 +113,26 @@ export async function GET() {
     const followDoc = activeFollowUp?.doctorId as unknown as PopulatedDoctor | undefined;
     const primDoc = primaryDoctor as unknown as PopulatedDoctor | undefined;
 
+    // Outstanding bills from database
+    const outstandingInvoices = await Invoice.find({
+      patientId,
+      status: { $in: ["pending", "partially_paid", "overdue"] },
+      balanceAmount: { $gt: 0 },
+    });
+    const totalOutstanding = outstandingInvoices.reduce(
+      (sum, inv) => sum + (inv.balanceAmount || 0),
+      0
+    );
+
     return NextResponse.json({
       success: true,
       patient: {
         name: user.name,
         mrn: patient.mrn,
-        bloodGroup: patient.bloodGroup || "O+",
+        bloodGroup: patient.bloodGroup || "—",
         age,
         allergies: patient.allergies || [],
-        primaryDoctor: primDoc?.name || "Dr. Anjali Menon",
+        primaryDoctor: primDoc?.name || "Unassigned",
         lastVisit: lastVisit
           ? new Date(lastVisit.visitDate).toLocaleDateString("en-US", {
               month: "short",
@@ -133,7 +145,7 @@ export async function GET() {
         upcomingAppointments: upcomingCount,
         activePrescriptions: activeRxCount,
         pendingLabs: verifiedLabsCount,
-        outstandingBills: "$1,250",
+        outstandingBills: `$${totalOutstanding.toFixed(0)}`,
       },
       nextAppointment: nextAppointment
         ? {

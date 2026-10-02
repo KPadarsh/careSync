@@ -98,7 +98,7 @@ export const ProfileView: React.FC = () => {
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 flex flex-col gap-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-[#006a68] text-white flex items-center justify-center font-bold text-xl ring-4 ring-teal-50">
-            VM
+            {(profile?.name || "LT").split(" ").filter(Boolean).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "LT"}
           </div>
           <div>
             <h2 className="text-lg font-bold text-[#00355f]">{profile?.name}</h2>

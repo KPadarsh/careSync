@@ -1,17 +1,24 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export type MedicineStatus = "in_stock" | "low_stock" | "out_of_stock";
+export type MedicineStatus =
+  | "AVAILABLE"
+  | "LOW_STOCK"
+  | "OUT_OF_STOCK"
+  | "in_stock"
+  | "low_stock"
+  | "out_of_stock";
 
 export interface IMedicine extends Document {
+  medicineId: string;
   name: string;
   genericName?: string;
-  category: string;
+  unit: string;
   availableQuantity: number;
-  unit: string; // e.g., "tablets", "capsules", "bottles", "vials", "ampoules", "tubes"
   lowStockThreshold: number;
-  status: MedicineStatus;
+  category?: string;
   unitPrice?: number;
-  location?: string; // Shelf / Rack identifier, e.g. "Rack A-3"
+  location?: string;
+  status: MedicineStatus;
   description?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -19,21 +26,77 @@ export interface IMedicine extends Document {
 
 const MedicineSchema = new Schema<IMedicine>(
   {
-    name: { type: String, required: true, trim: true, index: true },
-    genericName: { type: String, trim: true },
-    category: { type: String, required: true, default: "General", trim: true },
-    availableQuantity: { type: Number, required: true, min: 0, default: 0 },
-    unit: { type: String, required: true, default: "tablets", trim: true },
-    lowStockThreshold: { type: Number, required: true, min: 1, default: 20 },
-    status: {
+    medicineId: {
       type: String,
-      enum: ["in_stock", "low_stock", "out_of_stock"],
-      default: "in_stock",
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+      index: true,
+      default: function (this: IMedicine) {
+        return `MED-${Math.floor(1000 + Math.random() * 9000)}`;
+      },
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
       index: true,
     },
-    unitPrice: { type: Number, min: 0, default: 0 },
-    location: { type: String, default: "Main Shelf", trim: true },
-    description: { type: String, trim: true },
+    genericName: {
+      type: String,
+      trim: true,
+    },
+    unit: {
+      type: String,
+      required: true,
+      default: "tablets",
+      trim: true,
+    },
+    availableQuantity: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    lowStockThreshold: {
+      type: Number,
+      required: true,
+      min: 1,
+      default: 20,
+    },
+    category: {
+      type: String,
+      default: "General",
+      trim: true,
+    },
+    unitPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    location: {
+      type: String,
+      default: "Main Dispensary Shelf",
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: [
+        "AVAILABLE",
+        "LOW_STOCK",
+        "OUT_OF_STOCK",
+        "in_stock",
+        "low_stock",
+        "out_of_stock",
+      ],
+      default: "AVAILABLE",
+      index: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -43,11 +106,11 @@ const MedicineSchema = new Schema<IMedicine>(
 // Pre-save hook to calculate status automatically from availableQuantity and threshold
 MedicineSchema.pre<IMedicine>("save", function () {
   if (this.availableQuantity <= 0) {
-    this.status = "out_of_stock";
+    this.status = this.status === "out_of_stock" ? "out_of_stock" : "OUT_OF_STOCK";
   } else if (this.availableQuantity <= this.lowStockThreshold) {
-    this.status = "low_stock";
+    this.status = this.status === "low_stock" ? "low_stock" : "LOW_STOCK";
   } else {
-    this.status = "in_stock";
+    this.status = this.status === "in_stock" ? "in_stock" : "AVAILABLE";
   }
 });
 

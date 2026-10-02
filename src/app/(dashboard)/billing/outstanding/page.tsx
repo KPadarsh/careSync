@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { OutstandingView } from "@/components/portals/billing";
+import { BillingShell, OutstandingView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Outstanding Balances | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function OutstandingPage() {
-  return <OutstandingView />;
+  return (
+    <BillingShell>
+      <OutstandingView />
+    </BillingShell>
+  );
 }

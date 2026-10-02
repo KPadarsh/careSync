@@ -1,22 +1,31 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface ILabSample extends Document {
-  sampleId: string; // e.g. SMP-2026-00125
-  labReportId: Types.ObjectId; // Ref: LabReport
-  patientId: Types.ObjectId; // Ref: Patient
-  doctorId?: Types.ObjectId; // Ref: Doctor
+  sampleId: string;
+  labRequestId?: Types.ObjectId;
+  labReportId?: Types.ObjectId; // Backwards compatibility
+  patientId: Types.ObjectId;
+  encounterId?: Types.ObjectId;
+  doctorId?: Types.ObjectId;
   testName: string;
   department: string;
-  specimenType: string; // e.g. Venous Blood, Serum, Urine, Plasma, CSF, Sputum
-  tubeType: string; // e.g. Lavender Top (EDTA), Gold Top (SST), Light Blue (Sodium Citrate)
-  barcode: string; // e.g. CS-SMP-2026-00125-T792 (Secure token, does NOT encode patient PII)
-  barcodeToken: string; // Secure token for fast scanner lookup
-  collectionSite: string; // e.g. Phlebotomy Station 2
+  specimenType: string;
+  tubeType: string;
+  barcode: string;
+  barcodeToken?: string;
+  collectionSite?: string;
   collectedAt: Date;
-  collectedBy: string; // e.g. Vikram Malhotra, MLT
-  storageLocation: string; // e.g. Rack C-04 / Shelf 2 (Cold 4°C)
-  volume?: string; // e.g. 4.0 mL
+  collectedBy?: string;
+  storageLocation?: string;
+  volume?: string;
   status:
+    | "PENDING"
+    | "COLLECTED"
+    | "PROCESSING"
+    | "ANALYZED"
+    | "STORED"
+    | "DISPOSED"
+    | "REJECTED"
     | "pending"
     | "collected"
     | "processing"
@@ -39,16 +48,25 @@ const LabSampleSchema = new Schema<ILabSample>(
       trim: true,
       index: true,
     },
+    labRequestId: {
+      type: Schema.Types.ObjectId,
+      ref: "LabRequest",
+      index: true,
+    },
     labReportId: {
       type: Schema.Types.ObjectId,
       ref: "LabReport",
-      required: true,
       index: true,
     },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
       required: true,
+      index: true,
+    },
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
       index: true,
     },
     doctorId: {
@@ -83,19 +101,20 @@ const LabSampleSchema = new Schema<ILabSample>(
     },
     barcodeToken: {
       type: String,
-      required: true,
       trim: true,
-      index: true,
+      default: function (this: ILabSample) {
+        return this.barcode;
+      },
     },
     collectionSite: {
       type: String,
-      default: "Central Phlebotomy Station 2",
+      default: "Central Phlebotomy Station",
       trim: true,
     },
     collectedAt: { type: Date, default: Date.now },
     collectedBy: {
       type: String,
-      default: "Vikram Malhotra, MLT",
+      default: "Lab Technician",
       trim: true,
     },
     storageLocation: {
@@ -107,6 +126,13 @@ const LabSampleSchema = new Schema<ILabSample>(
     status: {
       type: String,
       enum: [
+        "PENDING",
+        "COLLECTED",
+        "PROCESSING",
+        "ANALYZED",
+        "STORED",
+        "DISPOSED",
+        "REJECTED",
         "pending",
         "collected",
         "processing",
@@ -115,11 +141,11 @@ const LabSampleSchema = new Schema<ILabSample>(
         "disposed",
         "rejected",
       ],
-      default: "collected",
+      default: "COLLECTED",
       index: true,
     },
-    rejectionReason: { type: String },
-    technicianNotes: { type: String },
+    rejectionReason: { type: String, trim: true },
+    technicianNotes: { type: String, trim: true },
   },
   {
     timestamps: true,

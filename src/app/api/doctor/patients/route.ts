@@ -111,9 +111,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Doctor patients list error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to load doctor patients" },
-      { status: 500 }
+      { status }
     );
   }
 }

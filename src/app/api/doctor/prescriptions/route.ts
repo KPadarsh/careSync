@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireDoctorSession } from "@/lib/auth";
 import { Prescription, Patient, Doctor, Visit } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -100,9 +101,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Doctor prescriptions GET error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to load doctor prescriptions" },
-      { status: 500 }
+      { status }
     );
   }
 }
@@ -148,6 +150,22 @@ export async function POST(request: NextRequest) {
       notes: notes || `Created by ${session.doctor.name} on ${new Date().toLocaleDateString()}`,
     });
 
+    // Notify Pharmacy via NotificationService
+    try {
+      await NotificationService.notifyRole("PHARMACIST", {
+        title: "New Prescription Issued",
+        message: `Dr. ${session.doctor.name} issued a prescription for ${patient.firstName} ${patient.lastName} (${prescription.medications.length} items).`,
+        type: "prescription",
+        link: "/pharmacy/prescriptions",
+        relatedResource: {
+          resourceType: "prescription",
+          resourceId: prescription._id.toString(),
+        },
+      });
+    } catch (err) {
+      console.error("Failed to notify pharmacy of new prescription:", err);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Prescription successfully submitted and available to Pharmacy.",
@@ -160,9 +178,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Doctor prescription POST error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to create prescription" },
-      { status: 500 }
+      { status }
     );
   }
 }

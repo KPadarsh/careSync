@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  BillingShell,
   CreditCardIcon,
   SearchIcon,
   PrinterIcon,
@@ -86,8 +85,7 @@ export function HistoryView() {
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <BillingShell activeKey="history">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -309,6 +307,5 @@ export function HistoryView() {
           )}
         </div>
       </div>
-    </BillingShell>
   );
 }

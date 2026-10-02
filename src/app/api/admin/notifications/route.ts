@@ -9,7 +9,7 @@ export async function GET() {
     await connectToDatabase();
 
     const notifications = await Notification.find({
-      $or: [{ recipientId: session.user._id }, { type: "system" }],
+      recipientId: session.user._id,
     })
       .sort({ createdAt: -1 })
       .limit(30)
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
 
     if (action === "mark_all_read") {
       await Notification.updateMany(
-        { $or: [{ recipientId: session.user._id }, { type: "system" }] },
+        { recipientId: session.user._id },
         { isRead: true }
       );
       return NextResponse.json({ success: true, message: "All notifications marked as read" });

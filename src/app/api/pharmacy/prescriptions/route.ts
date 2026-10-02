@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePharmacySession } from "@/lib/auth";
-import { Prescription, Patient } from "@/models";
+import { Prescription, Patient, User } from "@/models";
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,9 +23,20 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      // Find matching users by name
+      const matchingUsers = await User.find({
+        name: { $regex: search, $options: "i" },
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
       // Find matching patient IDs
       const matchingPatients = await Patient.find({
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { userId: { $in: userIds } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { mrn: { $regex: search, $options: "i" } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -36,12 +47,34 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const prescriptions = await Prescription.find(query)
-      .populate("patientId", "name mrn gender dateOfBirth bloodGroup phone allergies")
+    const rawPrescriptions = await Prescription.find(query)
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender dateOfBirth bloodGroup phone allergies userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department qualification")
       .populate("dispensingRecordId")
       .sort({ createdAt: -1 })
       .lean();
+
+    const getPatientName = (patient: any) => {
+      if (!patient) return "Patient";
+      if (patient.userId && typeof patient.userId === "object" && patient.userId.name) {
+        return patient.userId.name;
+      }
+      if (patient.firstName || patient.lastName) {
+        return `${patient.firstName || ""} ${patient.lastName || ""}`.trim();
+      }
+      return patient.name || "Patient";
+    };
+
+    const prescriptions = rawPrescriptions.map((rx: any) => {
+      if (rx.patientId) {
+        rx.patientId.name = getPatientName(rx.patientId);
+      }
+      return rx;
+    });
 
     return NextResponse.json({
       success: true,

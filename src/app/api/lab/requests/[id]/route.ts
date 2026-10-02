@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireLabSession } from "@/lib/auth";
 import { LabReport, LabSample, Patient, Doctor, Notification } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 
 export async function GET(
   request: NextRequest,
@@ -113,10 +114,10 @@ export async function GET(
       },
       doctor: {
         _id: (report as any).doctorId?._id?.toString(),
-        name: (report as any).doctorId?.name || "Dr. Anil Kumar",
+        name: (report as any).doctorId?.name || "Ordering Physician",
         specialty: (report as any).doctorId?.specialty || "Internal Medicine",
         department: (report as any).doctorId?.department || "Cardiology",
-        roomNumber: (report as any).doctorId?.roomNumber || "Consultation 302",
+        roomNumber: (report as any).doctorId?.roomNumber || "Consultation Room",
       },
     };
 
@@ -137,7 +138,7 @@ export async function PATCH(
   try {
     await connectToDatabase();
     const session = await requireLabSession();
-    const technicianName = session.user.name || "Vikram Malhotra, MLT";
+    const technicianName = session.user.name || "Lab Technician";
     const { id } = await context.params;
     const body = await request.json();
     const { action } = body;
@@ -153,7 +154,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           error:
-            "Permission Denied: Lab Technicians cannot verify or finalize pathology reports. Result verification is strictly restricted to Board Certified Pathologists (Dr. Sunita Patil, MD).",
+            "Permission Denied: Lab Technicians cannot verify or finalize pathology reports. Result verification is strictly restricted to Board Certified Pathologists.",
         },
         { status: 403 }
       );
@@ -278,15 +279,17 @@ export async function PATCH(
       const { results, technicianNotes } = body;
 
       if (results && Array.isArray(results)) {
-        report.results = results.map((r: any) => ({
-          parameter: r.parameter?.trim() || "Parameter",
-          value: r.value?.trim() || "",
-          unit: r.unit?.trim() || "",
-          referenceRange: r.referenceRange?.trim() || "",
-          flag: ["normal", "high", "low", "critical"].includes(r.flag)
-            ? r.flag
-            : "normal",
-        }));
+        report.results = results
+          .filter((r: any) => r && (r.parameter?.trim() || r.value !== undefined))
+          .map((r: any) => ({
+            parameter: r.parameter?.trim() || "Parameter",
+            value: r.value !== undefined && r.value !== null ? String(r.value).trim() : "",
+            unit: r.unit !== undefined && r.unit !== null ? String(r.unit).trim() : "",
+            referenceRange: r.referenceRange !== undefined && r.referenceRange !== null ? String(r.referenceRange).trim() : "",
+            flag: ["normal", "high", "low", "critical"].includes(r.flag)
+              ? r.flag
+              : "normal",
+          }));
       }
 
       report.status = "result_entered";
@@ -306,16 +309,18 @@ export async function PATCH(
     if (action === "submit_result_for_review" || action === "submit_for_review") {
       const { results, technicianNotes } = body;
 
-      if (results && Array.isArray(results) && results.length > 0) {
-        report.results = results.map((r: any) => ({
-          parameter: r.parameter?.trim() || "Parameter",
-          value: r.value?.trim() || "",
-          unit: r.unit?.trim() || "",
-          referenceRange: r.referenceRange?.trim() || "",
-          flag: ["normal", "high", "low", "critical"].includes(r.flag)
-            ? r.flag
-            : "normal",
-        }));
+      if (results && Array.isArray(results)) {
+        report.results = results
+          .filter((r: any) => r && (r.parameter?.trim() || r.value !== undefined))
+          .map((r: any) => ({
+            parameter: r.parameter?.trim() || "Parameter",
+            value: r.value !== undefined && r.value !== null ? String(r.value).trim() : "",
+            unit: r.unit !== undefined && r.unit !== null ? String(r.unit).trim() : "",
+            referenceRange: r.referenceRange !== undefined && r.referenceRange !== null ? String(r.referenceRange).trim() : "",
+            flag: ["normal", "high", "low", "critical"].includes(r.flag)
+              ? r.flag
+              : "normal",
+          }));
       }
 
       if (!report.results || report.results.length === 0) {
@@ -325,10 +330,20 @@ export async function PATCH(
         );
       }
 
+      const emptyValueRow = report.results.find((r) => !r.value || !r.value.trim());
+      if (emptyValueRow) {
+        return NextResponse.json(
+          {
+            error: `Please enter the measured value for '${emptyValueRow.parameter}' before submitting for Pathologist review.`,
+          },
+          { status: 400 }
+        );
+      }
+
       report.status = "submitted_for_review";
       (report as any).submittedForReviewAt = new Date();
       (report as any).submittedBy = technicianName;
-      report.verifiedBy = "Awaiting Pathologist Review (Dr. Sunita Patil, MD)";
+      report.verifiedBy = "Awaiting Pathologist Review";
       if (technicianNotes) (report as any).technicianNotes = technicianNotes;
       await report.save();
 
@@ -338,21 +353,18 @@ export async function PATCH(
         { status: "analyzed" }
       );
 
-      // Create notification for Pathologist
+      // Create notification for Pathologist via NotificationService
       try {
-        const pathologistUser = await (await import("@/models")).User.findOne({
-          role: "pathologist",
+        await NotificationService.notifyRole("PATHOLOGIST", {
+          title: `Review Requisition: ${report.testName}`,
+          message: `Technician ${technicianName} submitted results for ${report.testName} (Sample: ${(report as any).sampleId || "N/A"}). Review and verification required.`,
+          type: "lab_report",
+          link: `/pathologist/reports/${report._id}`,
+          relatedResource: {
+            resourceType: "lab_report",
+            resourceId: report._id.toString(),
+          },
         });
-        if (pathologistUser) {
-          await Notification.create({
-            recipientId: pathologistUser._id,
-            title: `Review Requisition: ${report.testName}`,
-            message: `Technician ${technicianName} submitted results for ${report.testName} (Sample: ${(report as any).sampleId || "N/A"}). Review and verification required.`,
-            type: "lab_report",
-            link: `/pathologist/review/${report._id}`,
-            isRead: false,
-          });
-        }
       } catch (err) {
         console.error("Pathologist notification creation failed:", err);
       }

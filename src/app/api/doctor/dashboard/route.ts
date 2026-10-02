@@ -246,7 +246,7 @@ export async function GET() {
     console.error("Doctor dashboard API error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load doctor dashboard data" },
-      { status: 500 }
+      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
     );
   }
 }

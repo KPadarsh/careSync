@@ -22,9 +22,10 @@ export async function GET() {
       records,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "";
-    if (message === "UNAUTHORIZED_PATIENT") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const err = error as any;
+    const status = err?.statusCode || (err?.message?.includes("Forbidden") ? 403 : err?.message?.includes("Unauthorized") ? 401 : 500);
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: err?.message || "Unauthorized" }, { status });
     }
     console.error("Fetch medical records error:", error);
     return NextResponse.json({ error: "Failed to fetch medical records" }, { status: 500 });

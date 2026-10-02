@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireBillingSession } from "@/lib/auth";
-import { Invoice, Patient } from "@/models";
+import { Invoice, Patient, User } from "@/models";
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,8 +22,21 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
       const matchingPatients = await Patient.find({
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { mrn: { $regex: search, $options: "i" } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -35,10 +48,31 @@ export async function GET(req: NextRequest) {
     }
 
     const invoices = await Invoice.find(query)
-      .populate("patientId", "name mrn gender phone insurance")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender phone insurance userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty")
       .sort({ dueDate: 1, balanceAmount: -1 })
       .lean();
+
+    const formatted = invoices.map((inv: any) => {
+      const p = inv.patientId;
+      const patientName =
+        p?.userId?.name ||
+        `${p?.firstName || ""} ${p?.lastName || ""}`.trim() ||
+        "Patient";
+      return {
+        ...inv,
+        patientId: p
+          ? {
+              ...p,
+              name: patientName,
+            }
+          : null,
+      };
+    });
 
     // Summary & Aging Breakdown
     const now = new Date();
@@ -78,7 +112,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      invoices,
+      invoices: formatted,
       summary: {
         totalOutstanding,
         totalInvoices: invoices.length,

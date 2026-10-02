@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AdminShell,
   ArrowLeftIcon,
@@ -12,6 +13,7 @@ import {
   RefreshIcon,
   BuildingIcon,
   ClockIcon,
+  TrashIcon,
 } from "./AdminShell";
 
 interface StaffDetailViewProps {
@@ -19,8 +21,10 @@ interface StaffDetailViewProps {
 }
 
 export function StaffDetailView({ id }: StaffDetailViewProps) {
+  const router = useRouter();
   const [staff, setStaff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -34,7 +38,15 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
     emergencyContact: "",
     qualifications: "",
     notes: "",
+    password: "",
   });
+
+  // Manual Password Assignment State
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const fetchStaffDetails = async () => {
     setLoading(true);
@@ -55,6 +67,7 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
         emergencyContact: data.staff.emergencyContact || "",
         qualifications: data.staff.qualifications || "",
         notes: data.staff.notes || "",
+        password: "",
       });
     } catch (err: any) {
       setError(err.message || "Failed to load staff record");
@@ -80,30 +93,103 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
       if (data.success) {
         setStaff(data.staff);
         setSuccess(`Staff status updated to ${newStatus}`);
+        setError(null);
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || "Failed to update staff status");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating status:", err);
+      setError(err.message || "Failed to update status");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+    setResettingPassword(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    try {
+      const res = await fetch(`/api/admin/staff/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update staff password");
+      }
+      setPasswordSuccess("Staff password updated successfully. Active sessions revoked.");
+      setNewPassword("");
+      setTimeout(() => setPasswordSuccess(null), 5000);
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to reset password");
+    } finally {
+      setResettingPassword(false);
     }
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload: Record<string, any> = { ...editForm };
+      if (!payload.password) {
+        delete payload.password;
+      }
       const res = await fetch(`/api/admin/staff/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
         setStaff(data.staff);
         setIsEditing(false);
         setSuccess("Staff profile updated successfully");
+        setError(null);
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(data.error || "Failed to update staff profile");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error saving edits:", err);
+      setError(err.message || "Failed to save edits");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete staff member ${staff?.fullName || "this staff member"}? This will permanently remove their profile and login account from the database.`
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/staff/${id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete staff member");
+      }
+      setSuccess("Staff member permanently deleted. Redirecting to directory...");
+      setTimeout(() => {
+        router.push("/admin/staff");
+      }, 1000);
+    } catch (err: any) {
+      console.error("Error deleting staff:", err);
+      setError(err.message || "Failed to delete staff member");
+      setDeleting(false);
     }
   };
 
@@ -159,11 +245,19 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
               onClick={handleToggleStatus}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                 staff.status === "active"
-                  ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
                   : "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
               }`}
             >
               {staff.status === "active" ? "Deactivate Account" : "Activate Account"}
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+            >
+              <TrashIcon className="w-3.5 h-3.5 text-rose-600" />
+              {deleting ? "Deleting..." : "Delete Staff"}
             </button>
           </div>
         </div>
@@ -172,6 +266,13 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
           <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-sm">
             <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
             <span>{success}</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-sm">
+            <AlertTriangleIcon className="w-4 h-4 text-rose-600" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -312,6 +413,22 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
               />
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Reset Account Password (Optional)
+              </label>
+              <input
+                type="text"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Leave blank to keep existing password unchanged"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Enter at least 8 characters if you wish to reset this staff member's password now.
+              </span>
+            </div>
+
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
@@ -384,6 +501,73 @@ export function StaffDetailView({ id }: StaffDetailViewProps) {
                     {staff.qualifications || "Not Specified"}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Account Access & Password Management Card */}
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                  Account Security & Login Password
+                </h2>
+                <span className="text-xs text-slate-500 font-medium">
+                  Admin Manual Password Assignment
+                </span>
+              </div>
+
+              {passwordSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 text-xs">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>{passwordSuccess}</span>
+                </div>
+              )}
+
+              {passwordError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 text-rose-800 text-xs">
+                  <AlertTriangleIcon className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div className="text-xs space-y-1.5 text-slate-600">
+                  <p>
+                    <strong>Login Username:</strong> <span className="font-mono text-slate-800">{staff.email}</span>
+                  </p>
+                  <p>
+                    Admin can directly assign or reset the password for this staff member at any time. When updated, active sessions will be terminated and the staff member can immediately log in with the new password.
+                  </p>
+                </div>
+
+                <form onSubmit={handleResetPassword} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                  <div className="relative w-full sm:w-64">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 8)..."
+                      className="w-full px-3 py-2 pr-16 border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-slate-500 hover:text-slate-800 px-1 py-0.5"
+                    >
+                      {showNewPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={resettingPassword || !newPassword}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold whitespace-nowrap transition shadow-sm"
+                  >
+                    {resettingPassword ? "Updating..." : "Set New Password"}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

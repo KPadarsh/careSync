@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireReceptionSession } from "@/lib/auth";
 import { Queue, Appointment, Patient, Doctor } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 import { Types } from "mongoose";
 
 export async function GET(req: NextRequest) {
@@ -159,6 +160,22 @@ export async function POST(req: NextRequest) {
       checkedInTime: new Date(),
       notes: notes || `Checked in by Receptionist ${receptionist.name}`,
     });
+
+    // Notify nurse triage station via NotificationService
+    try {
+      await NotificationService.notifyRole("NURSE", {
+        title: "New Patient Ready",
+        message: "A checked-in patient is ready for nursing assessment.",
+        type: "queue",
+        link: "/nurse/queue",
+        relatedResource: {
+          resourceType: "queue",
+          resourceId: newQueue._id.toString(),
+        },
+      });
+    } catch (notifErr) {
+      console.error("Failed to notify nurse of queue generation:", notifErr);
+    }
 
     const populated = await Queue.findById(newQueue._id)
       .populate({

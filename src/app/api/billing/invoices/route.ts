@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireBillingSession } from "@/lib/auth";
-import { Invoice, Patient, Doctor } from "@/models";
+import { Invoice, Patient, Doctor, User, Notification } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +21,21 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
       const matchingPatients = await Patient.find({
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { mrn: { $regex: search, $options: "i" } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -33,15 +48,36 @@ export async function GET(req: NextRequest) {
     }
 
     const invoices = await Invoice.find(query)
-      .populate("patientId", "name mrn gender phone bloodGroup insurance")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender phone bloodGroup insurance userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department")
       .sort({ date: -1, createdAt: -1 })
       .lean();
 
+    const formatted = invoices.map((inv: any) => {
+      const p = inv.patientId;
+      const patientName =
+        p?.userId?.name ||
+        `${p?.firstName || ""} ${p?.lastName || ""}`.trim() ||
+        "Patient";
+      return {
+        ...inv,
+        patientId: p
+          ? {
+              ...p,
+              name: patientName,
+            }
+          : null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      invoices,
-      total: invoices.length,
+      invoices: formatted,
+      total: formatted.length,
     });
   } catch (error: any) {
     console.error("Billing invoices GET error:", error);
@@ -140,7 +176,45 @@ export async function POST(req: NextRequest) {
       status: "pending",
       notes: notes ? String(notes).trim() : undefined,
       createdBy: session.user._id,
-      createdByName: session.user.name || "Meera Nair, Billing Specialist",
+      createdByName: session.user.name || "Billing Specialist",
+    });
+
+    // Notify patient via NotificationService
+    try {
+      if (patient.userId) {
+        await NotificationService.createNotification({
+          recipientUserId: patient.userId,
+          title: `New Hospital Invoice (${invoice.invoiceNumber})`,
+          message: `An invoice for $${invoice.totalAmount.toFixed(2)} has been issued by billing. Due on ${invoice.dueDate.toLocaleDateString()}.`,
+          type: "billing",
+          link: "/patient/billing",
+          relatedResource: {
+            resourceType: "invoice",
+            resourceId: invoice._id.toString(),
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify patient of invoice:", notifErr);
+    }
+
+    // Record audit event
+    await logAuditEvent({
+      actor: {
+        userId: session.user._id,
+        name: session.user.name,
+        email: session.user.email,
+        role: session.user.role,
+      },
+      action: "INVOICE_CREATED",
+      resource: `Invoice ${invoice.invoiceNumber} for Patient ${patient.mrn}`,
+      resourceType: "invoice",
+      metadata: {
+        invoiceId: invoice._id,
+        patientId: patient._id,
+        totalAmount: invoice.totalAmount,
+        servicesCount: invoice.services.length,
+      },
     });
 
     return NextResponse.json({

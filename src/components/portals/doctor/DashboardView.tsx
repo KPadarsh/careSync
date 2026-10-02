@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import {
   ClockIcon,
   ArrowForwardIcon,
@@ -123,10 +125,10 @@ export const DashboardView: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto flex items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-[#006194] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-[#565e74]">
+          <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+          <span className="text-xs font-medium text-slate-500">
             Loading doctor schedule...
           </span>
         </div>
@@ -154,129 +156,107 @@ export const DashboardView: React.FC = () => {
   const recentActivity = data?.recentActivity || [];
 
   return (
-    <div className="w-full px-4 sm:px-6 py-6 max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
       {/* Top Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-[14px] text-[#565e74] mt-0.5">
-            Good morning, {data?.doctor?.name || "Dr. Anil Kumar"}. Here's your schedule for today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#eff4ff] text-[#565e74]">
-            <span className="w-2 h-2 rounded-full bg-[#006194]" />
-            <span className="text-[13px] text-[#0b1c30] font-semibold">{todayStr}</span>
-            <span className="w-1 h-1 rounded-full bg-[#bfc7d2]" />
-            <span className="text-[12px] text-[#565e74]">
-              {data?.doctor?.roomNumber || "Room 302"}
-            </span>
-          </div>
-          <button
-            onClick={handleRefresh}
-            type="button"
-            className="p-2 rounded-lg bg-white border border-[#bfc7d2]/50 text-[#565e74] hover:text-[#0b1c30] hover:bg-[#eff4ff] transition-all shadow-xs"
-            title="Refresh"
-          >
-            <RefreshIcon className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* 4 Operational Metric Cards (No unnecessary analytics) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Today's Patients */}
-        <div className="p-5 bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[#565e74]">
-              Today's Patients
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#006194]">
-              <StethoscopeIcon className="w-4 h-4" />
+      <PageHeader
+        title="Clinical Dashboard"
+        description={`Good morning${data?.doctor?.name ? `, ${data.doctor.name}` : ""}. Here's your clinical schedule for today.`}
+        badge={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
+            {data?.doctor?.roomNumber || "Consultation Room"}
+          </span>
+        }
+        actions={
+          <div className="flex items-center gap-2.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-sky-600" />
+              <span>{todayStr}</span>
             </div>
+            <button
+              onClick={handleRefresh}
+              type="button"
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs"
+              title="Refresh"
+            >
+              <RefreshIcon className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[#0b1c30] leading-none">
-              {stats.totalToday}
-            </span>
-            <span className="text-[12px] text-[#565e74]">
-              {stats.todayConsultationsCount} completed
-            </span>
-          </div>
-        </div>
+        }
+      />
 
-        {/* Card 2: Waiting (Patients handed off by nursing) */}
-        <div className="p-5 bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[#565e74]">
-              Patients Waiting
-            </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[#0b1c30] leading-none">
-              {stats.waitingCount}
-            </span>
-            <span className="text-[12px] text-[#565e74]">Next ready</span>
-          </div>
-        </div>
+      {/* 4 Operational Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/doctor/patients">
+          <StatCard
+            title="Today's Patients"
+            value={stats.totalToday}
+            subtext={`${stats.todayConsultationsCount} completed`}
+            icon={
+              <div className="text-sky-600">
+                <StethoscopeIcon className="w-4 h-4" />
+              </div>
+            }
+          />
+        </Link>
 
-        {/* Card 3: In Consultation */}
-        <div className="p-5 bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[#565e74]">
-              In Consultation
-            </span>
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006194] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#006194]" />
-            </span>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[#0b1c30] leading-none">
-              {stats.inConsultationCount}
-            </span>
-            <span className="text-[12px] text-[#565e74]">
-              {data?.doctor?.roomNumber || "Room 302"} active
-            </span>
-          </div>
-        </div>
+        <Link href="/doctor/queue">
+          <StatCard
+            title="Patients Waiting"
+            value={stats.waitingCount}
+            subtext="Ready for consultation"
+            icon={
+              <div className="text-amber-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+              </div>
+            }
+          />
+        </Link>
 
-        {/* Card 4: Follow-ups Today */}
-        <div className="p-5 bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-medium text-[#565e74]">
-              Follow-ups Today
-            </span>
-            <span className="w-2.5 h-2.5 rounded-full bg-[#565e74]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-[#0b1c30] leading-none">
-              {stats.followUpsTodayCount}
-            </span>
-            <span className="text-[12px] text-[#565e74]">Scheduled reviews</span>
-          </div>
-        </div>
+        <Link href="/doctor/queue">
+          <StatCard
+            title="In Consultation"
+            value={stats.inConsultationCount}
+            subtext={`${data?.doctor?.roomNumber || "Room 302"} active`}
+            icon={
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-600 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-600" />
+              </span>
+            }
+          />
+        </Link>
+
+        <Link href="/doctor/follow-ups">
+          <StatCard
+            title="Follow-ups Today"
+            value={stats.followUpsTodayCount}
+            subtext="Scheduled reviews"
+            icon={
+              <div className="text-slate-600">
+                <ClockIcon className="w-4 h-4" />
+              </div>
+            }
+          />
+        </Link>
       </div>
 
       {/* Main Grid: Left Table (8 cols) + Right Info Cards (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Today's Appointments Table */}
-        <div className="lg:col-span-8 flex flex-col bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 overflow-hidden">
-          <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#bfc7d2]/20">
+        <div className="lg:col-span-8 flex flex-col bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+          <div className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <h2 className="text-base font-bold text-[#0b1c30]">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900">
                 Today's Appointments
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#eff4ff] text-[12px] text-[#565e74] font-medium">
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-xs text-slate-600 font-medium">
                 {stats.waitingCount + stats.inConsultationCount} Remaining
               </span>
             </div>
             <Link
               href="/doctor/queue"
-              className="text-[13px] font-medium text-[#006194] hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1 transition-colors"
             >
               <span>View Full Queue</span>
               <ChevronRightIcon className="w-4 h-4" />
@@ -286,28 +266,28 @@ export const DashboardView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#eff4ff]/60 h-9 border-b border-[#bfc7d2]/20">
-                  <th className="px-4 py-2 text-[12px] text-[#565e74] uppercase tracking-wider font-semibold">
+                <tr className="bg-slate-50/80 h-10 border-b border-slate-200">
+                  <th className="px-4 py-2.5 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
                     Time
                   </th>
-                  <th className="px-4 py-2 text-[12px] text-[#565e74] uppercase tracking-wider font-semibold">
+                  <th className="px-4 py-2.5 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
                     Patient
                   </th>
-                  <th className="px-4 py-2 text-[12px] text-[#565e74] uppercase tracking-wider font-semibold">
+                  <th className="px-4 py-2.5 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
                     Reason
                   </th>
-                  <th className="px-4 py-2 text-[12px] text-[#565e74] uppercase tracking-wider font-semibold">
+                  <th className="px-4 py-2.5 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
                     Status
                   </th>
-                  <th className="px-4 py-2 text-[12px] text-[#565e74] uppercase tracking-wider font-semibold text-right">
+                  <th className="px-4 py-2.5 text-[11px] text-slate-500 uppercase tracking-wider font-semibold text-right">
                     Action
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#bfc7d2]/20">
+              <tbody className="divide-y divide-slate-100">
                 {queue.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-[#565e74]">
+                    <td colSpan={5} className="px-4 py-10 text-center text-xs text-slate-400">
                       No queue items for today. All triage assessments clear.
                     </td>
                   </tr>
@@ -322,11 +302,11 @@ export const DashboardView: React.FC = () => {
                         key={item._id}
                         className={`h-14 transition-colors ${
                           isInConsultation
-                            ? "bg-[#006194]/5 hover:bg-[#006194]/10"
-                            : "hover:bg-[#eff4ff]/40"
+                            ? "bg-sky-50/40 hover:bg-sky-50/60"
+                            : "hover:bg-slate-50/60"
                         }`}
                       >
-                        <td className="px-4 py-3 text-[13px] font-semibold text-[#0b1c30] whitespace-nowrap">
+                        <td className="px-4 py-3 text-xs font-semibold text-slate-900 whitespace-nowrap">
                           {item.appointment.timeSlot}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -334,34 +314,34 @@ export const DashboardView: React.FC = () => {
                             href={`/doctor/patients/${item.patient._id}`}
                             className="flex flex-col group"
                           >
-                            <span className="text-[14px] font-semibold text-[#0b1c30] group-hover:text-[#006194] transition-colors">
+                            <span className="text-xs sm:text-[13px] font-semibold text-slate-900 group-hover:text-sky-600 transition-colors">
                               {item.patient.name}
                             </span>
-                            <span className="text-[12px] text-[#565e74]">
+                            <span className="text-[11px] text-slate-400">
                               {item.patient.gender}, {item.patient.age}y • {item.patient.mrn}
                             </span>
                           </Link>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="text-[13px] text-[#0b1c30]">
+                          <span className="text-xs text-slate-700">
                             {item.appointment.reason}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {isWaiting && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[12px] font-medium border border-amber-200">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-xs font-medium border border-amber-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
                               Ready for Doctor
                             </span>
                           )}
                           {isInConsultation && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73] text-[12px] font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#006194] animate-pulse" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold border border-sky-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-600 animate-pulse" />
                               In Consultation
                             </span>
                           )}
                           {isCompleted && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[12px] font-medium border border-emerald-200">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-medium border border-emerald-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                               Completed
                             </span>
@@ -372,7 +352,7 @@ export const DashboardView: React.FC = () => {
                             <button
                               onClick={() => handleStartConsultation(item.patient._id, item._id)}
                               type="button"
-                              className="h-8 px-3 rounded-lg bg-[#006194] hover:bg-[#007bb9] text-white text-[12px] font-semibold transition-colors shadow-xs inline-flex items-center gap-1"
+                              className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-xs inline-flex items-center gap-1"
                             >
                               <span>Start Consultation</span>
                               <ArrowForwardIcon className="w-3.5 h-3.5" />
@@ -382,7 +362,7 @@ export const DashboardView: React.FC = () => {
                             <button
                               onClick={() => router.push(`/doctor/consultations/${item.patient._id}`)}
                               type="button"
-                              className="h-8 px-3 rounded-lg bg-white border border-[#006194] text-[#006194] hover:bg-[#eff4ff] text-[12px] font-semibold shadow-xs transition-colors inline-flex items-center gap-1"
+                              className="h-8 px-3 rounded-lg bg-white border border-slate-300 text-slate-900 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition-colors inline-flex items-center gap-1"
                             >
                               <span>Continue</span>
                               <ArrowForwardIcon className="w-3.5 h-3.5" />
@@ -391,7 +371,7 @@ export const DashboardView: React.FC = () => {
                           {isCompleted && (
                             <Link
                               href={`/doctor/patients/${item.patient._id}`}
-                              className="h-8 px-3 rounded-lg text-[#565e74] hover:text-[#0b1c30] hover:bg-[#eff4ff] text-[12px] font-medium transition-colors inline-flex items-center gap-1"
+                              className="h-8 px-3 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium transition-colors inline-flex items-center gap-1"
                             >
                               <span>View Chart</span>
                               <ChevronRightIcon className="w-3.5 h-3.5" />
@@ -410,16 +390,16 @@ export const DashboardView: React.FC = () => {
         {/* RIGHT COLUMN: Quick Attention & Recent Activity */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           {/* Quick Attention */}
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col gap-4">
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-slate-200/80 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-[#0b1c30]">
+              <h3 className="text-sm font-bold text-slate-900">
                 Quick Attention
               </h3>
               <AlertTriangleIcon className="w-4 h-4 text-amber-600" />
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {quickAttention.length === 0 ? (
-                <p className="text-[13px] text-[#565e74]">
+                <p className="text-xs text-slate-400">
                   No urgent alerts. All vitals and triage priorities normal.
                 </p>
               ) : (
@@ -427,23 +407,23 @@ export const DashboardView: React.FC = () => {
                   <Link
                     key={idx}
                     href={`/doctor/patients/${item.patientId}`}
-                    className="p-3 rounded-lg bg-[#eff4ff]/60 flex flex-col gap-1 hover:bg-[#eff4ff] transition-colors border border-[#bfc7d2]/20"
+                    className="p-3 rounded-xl bg-slate-50/80 flex flex-col gap-1 hover:bg-slate-100 transition-colors border border-slate-200/80"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[14px] font-semibold text-[#0b1c30]">
+                      <span className="text-xs sm:text-[13px] font-semibold text-slate-900">
                         {item.patientName}
                       </span>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           item.badgeType === "error"
-                            ? "bg-[#ffdad6] text-[#ba1a1a]"
-                            : "bg-amber-100 text-amber-900"
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
                         }`}
                       >
                         {item.badgeText}
                       </span>
                     </div>
-                    <p className="text-[12px] text-[#565e74] leading-snug">
+                    <p className="text-xs text-slate-500 leading-snug">
                       {item.description}
                     </p>
                   </Link>
@@ -453,27 +433,27 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#bfc7d2]/30 flex flex-col gap-4">
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-slate-200/80 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-[#0b1c30]">
+              <h3 className="text-sm font-bold text-slate-900">
                 Recent Activity
               </h3>
-              <ClockIcon className="w-4 h-4 text-[#565e74]" />
+              <ClockIcon className="w-4 h-4 text-slate-400" />
             </div>
             <div className="flex flex-col gap-3.5 pl-1">
               {recentActivity.length === 0 ? (
-                <p className="text-[13px] text-[#565e74]">
+                <p className="text-xs text-slate-400">
                   No recent activities recorded yet.
                 </p>
               ) : (
                 recentActivity.map((act) => (
                   <div key={act.id} className="flex items-start gap-3 relative">
-                    <div className="w-2 h-2 rounded-full bg-[#006194] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-sky-600 mt-1.5 shrink-0" />
                     <div className="flex flex-col">
-                      <p className="text-[13px] text-[#0b1c30] leading-snug">
+                      <p className="text-xs text-slate-800 leading-snug font-medium">
                         {act.title}
                       </p>
-                      <span className="text-[11px] text-[#565e74] mt-0.5">
+                      <span className="text-[11px] text-slate-400 mt-0.5">
                         {act.detail}
                       </span>
                     </div>

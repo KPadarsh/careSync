@@ -1,40 +1,59 @@
-import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { AuthService } from "@/services/auth.service";
+import { Patient } from "@/models/Patient";
+import { connectToDatabase } from "@/lib/db";
 
-export async function GET() {
+/**
+ * GET /api/auth/me
+ * Ultra-fast endpoint returning current authenticated safe user.
+ * Rejects unauthenticated, inactive, or expired sessions with 401.
+ */
+export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session || !session.user) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
+    const user = await AuthService.getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { authenticated: false, error: "Unauthenticated or inactive account" },
+        { status: 401 }
+      );
+    }
+
+    // Resolve patient details only if role is patient
+    let patientData = null;
+    const roleNorm = (user.role || "").toUpperCase();
+    if (roleNorm === "PATIENT") {
+      await connectToDatabase();
+      const patient = await Patient.findOne({ userId: user.id }).lean();
+      if (patient) {
+        patientData = {
+          id: (patient._id as any).toString(),
+          patientId: patient.patientId,
+          mrn: patient.mrn,
+          firstName: patient.firstName,
+          lastName: patient.lastName,
+          bloodGroup: patient.bloodGroup,
+          gender: patient.gender,
+          phone: patient.phone,
+          email: patient.email,
+          allergies: patient.allergies,
+          address: patient.address,
+          emergencyContact: patient.emergencyContact,
+          insurance: patient.insurance,
+        };
+      }
     }
 
     return NextResponse.json({
       authenticated: true,
-      user: {
-        id: session.user._id.toString(),
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role,
-        phone: session.user.phone,
-        avatar: session.user.avatar,
-      },
-      patient: session.patient
-        ? {
-            id: session.patient._id.toString(),
-            mrn: session.patient.mrn,
-            bloodGroup: session.patient.bloodGroup,
-            gender: session.patient.gender,
-            phone: session.patient.phone,
-            allergies: session.patient.allergies,
-            address: session.patient.address,
-            emergencyContact: session.patient.emergencyContact,
-            insurance: session.patient.insurance,
-          }
-        : null,
-      role: session.role,
+      user,
+      patient: patientData,
+      role: user.role,
     });
   } catch (error) {
     console.error("Auth me error:", error);
-    return NextResponse.json({ error: "Failed to fetch session" }, { status: 500 });
+    return NextResponse.json(
+      { authenticated: false, error: "Unauthenticated" },
+      { status: 401 }
+    );
   }
 }

@@ -13,54 +13,18 @@ interface NotificationItem {
   createdAt: string;
 }
 
+import { useNotifications } from "@/hooks/useNotifications";
+
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    refresh,
+  } = useNotifications();
   const [filter, setFilter] = useState<string>("all");
-
-  const loadNotifications = () => {
-    fetch("/api/patient/notifications")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.notifications) {
-          setNotifications(data.notifications);
-        }
-      })
-      .catch((err) => console.error("Error loading notifications:", err))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await fetch("/api/patient/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-      );
-    } catch (err) {
-      console.error("Mark read error:", err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await fetch("/api/patient/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markAllRead: true }),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch (err) {
-      console.error("Mark all read error:", err);
-    }
-  };
 
   const filteredNotifications = notifications.filter((n) => {
     if (filter === "all") return true;
@@ -113,8 +77,6 @@ export function NotificationsView() {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -128,7 +90,7 @@ export function NotificationsView() {
         {unreadCount > 0 && (
           <button
             type="button"
-            onClick={handleMarkAllRead}
+            onClick={markAllAsRead}
             className="text-xs font-semibold text-[#006a61] hover:underline cursor-pointer self-start sm:self-auto px-3 py-1.5 rounded-lg border border-[#006a61]/20 hover:bg-[#006a61]/5 transition-colors"
           >
             Mark all as read
@@ -188,16 +150,18 @@ export function NotificationsView() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredNotifications.map((n) => (
-            <div
-              key={n._id}
-              onClick={() => !n.isRead && handleMarkAsRead(n._id)}
-              className={`bg-white rounded-xl border transition-all p-4 flex items-start gap-4 ${
-                !n.isRead
-                  ? "border-[#131b2e]/30 bg-[#eff4ff]/20 shadow-sm"
-                  : "border-[#e2e8f0] opacity-90"
-              }`}
-            >
+          {filteredNotifications.map((n) => {
+            const notifId = n.id || n._id;
+            return (
+              <div
+                key={notifId}
+                onClick={() => !n.isRead && markAsRead((notifId || "") as string)}
+                className={`bg-white rounded-xl border transition-all p-4 flex items-start gap-4 ${
+                  !n.isRead
+                    ? "border-[#131b2e]/30 bg-[#eff4ff]/20 shadow-sm"
+                    : "border-[#e2e8f0] opacity-90"
+                }`}
+              >
               {getIcon(n.type)}
 
               <div className="flex-1 min-w-0">
@@ -233,8 +197,9 @@ export function NotificationsView() {
                 )}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
       )}
     </div>
   );

@@ -162,7 +162,7 @@ export function ProfileView() {
                   Medical Record Number: <strong className="font-mono text-[#0b1c30]">{profile?.mrn}</strong>
                 </p>
                 <p className="text-xs text-[#006a61] font-medium mt-0.5">
-                  Primary Physician: {profile?.primaryDoctor?.name || "Dr. Anjali Menon"}
+                  Primary Physician: {profile?.primaryDoctor?.name || "Unassigned"}
                 </p>
               </div>
             </div>

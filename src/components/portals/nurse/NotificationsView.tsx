@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   NotificationsIcon,
   CheckCircleIcon,
@@ -11,59 +12,13 @@ import {
 } from "./NurseIcons";
 
 export const NotificationsView: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchNotifs = async () => {
-    try {
-      setRefreshing(true);
-      const res = await fetch("/api/nurse/notifications");
-      if (res.ok) {
-        const json = await res.json();
-        setNotifications(json.notifications || []);
-      }
-    } catch (err) {
-      console.error("Failed to load notifications:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifs();
-  }, []);
-
-  const handleMarkAllRead = async () => {
-    try {
-      const res = await fetch("/api/nurse/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markAllRead: true }),
-      });
-      if (res.ok) {
-        fetchNotifs();
-      }
-    } catch (err) {
-      console.error("Failed to mark all as read:", err);
-    }
-  };
-
-  const handleMarkRead = async (id: string) => {
-    try {
-      const res = await fetch("/api/nurse/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id }),
-      });
-      if (res.ok) {
-        fetchNotifs();
-      }
-    } catch (err) {
-      console.error("Failed to mark notification read:", err);
-    }
-  };
+  const {
+    notifications,
+    loading,
+    markAsRead: handleMarkRead,
+    markAllAsRead: handleMarkAllRead,
+    refresh,
+  } = useNotifications();
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -102,7 +57,7 @@ export const NotificationsView: React.FC = () => {
 
             return (
               <div
-                key={n._id}
+                key={n.id || n._id}
                 className={`p-4 flex items-start justify-between gap-4 transition-colors ${
                   !isRead ? "bg-blue-50/30" : "hover:bg-slate-50/70"
                 }`}
@@ -146,7 +101,7 @@ export const NotificationsView: React.FC = () => {
                   {!isRead && (
                     <button
                       type="button"
-                      onClick={() => handleMarkRead(n._id)}
+                      onClick={() => handleMarkRead(n.id || n._id || "")}
                       className="p-1 text-slate-400 hover:text-slate-600 text-xs"
                       title="Mark as read"
                     >

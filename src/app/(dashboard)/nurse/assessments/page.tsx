@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { connectToDatabase } from "@/lib/db";
 import { Queue, Patient } from "@/models";
 
+export const dynamic = "force-dynamic";
+
 export default async function NurseAssessmentsIndexPage() {
   await connectToDatabase();
   const queueItem = await Queue.findOne({

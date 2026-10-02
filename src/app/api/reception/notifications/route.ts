@@ -13,8 +13,12 @@ export async function GET(req: NextRequest) {
     const filterType = searchParams.get("type");
     const unreadOnly = searchParams.get("unread") === "true";
 
+    const recipientFilter = {
+      $or: [{ recipientUserId: user._id }, { recipientId: user._id }],
+    };
+
     const filter: Record<string, unknown> = {
-      recipientId: user._id,
+      ...recipientFilter,
     };
 
     if (filterType && filterType !== "all") {
@@ -28,7 +32,7 @@ export async function GET(req: NextRequest) {
       createdAt: -1,
     });
     const unreadCount = await Notification.countDocuments({
-      recipientId: user._id,
+      ...recipientFilter,
       isRead: false,
     });
 

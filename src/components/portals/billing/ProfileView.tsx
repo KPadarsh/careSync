@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  BillingShell,
   UserIcon,
   ShieldIcon,
   CheckCircle2Icon,
@@ -48,29 +47,28 @@ export function ProfileView() {
   }, []);
 
   return (
-    <BillingShell activeKey="profile">
-      <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
         {/* Header banner */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
           <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="w-24 h-24 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl font-bold text-white shadow-inner flex-shrink-0">
-              MN
+              {profile?.name ? profile.name.slice(0, 2).toUpperCase() : "BS"}
             </div>
             <div className="text-center sm:text-left">
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-2">
                 Active Staff • Financial Operations
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                {profile?.name || "Meera Nair"}
+                {profile?.name || "Billing Specialist"}
               </h1>
               <p className="text-sm text-slate-300 mt-1">
-                {profile?.role || "Senior Billing Specialist"} • {profile?.department || "Finance & Revenue Cycle Management"}
+                {profile?.role || "Billing Specialist"} • {profile?.department || "Finance & Revenue Cycle Management"}
               </p>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-4 text-xs text-slate-300">
                 <span className="flex items-center gap-1.5">
                   <MailIcon className="w-3.5 h-3.5 text-blue-400" />
-                  {profile?.email || "meera@billing.caresync.com"}
+                  {profile?.email || "billing@caresync.com"}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <PhoneIcon className="w-3.5 h-3.5 text-blue-400" />
@@ -208,6 +206,5 @@ export function ProfileView() {
           </div>
         </div>
       </div>
-    </BillingShell>
   );
 }

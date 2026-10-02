@@ -72,10 +72,10 @@ export interface ILabReport extends Document {
 
 const LabResultItemSchema = new Schema<ILabResultItem>(
   {
-    parameter: { type: String, required: true },
-    value: { type: String, required: true },
-    unit: { type: String, required: true },
-    referenceRange: { type: String, required: true },
+    parameter: { type: String, required: true, default: "Parameter" },
+    value: { type: String, default: "" },
+    unit: { type: String, default: "" },
+    referenceRange: { type: String, default: "" },
     flag: {
       type: String,
       enum: ["normal", "high", "low", "critical"],
@@ -148,7 +148,7 @@ const LabReportSchema = new Schema<ILabReport>(
     },
     summary: { type: String, required: true },
     technicianNotes: { type: String },
-    verifiedBy: { type: String, default: "Dr. Sunita Patil, MD Pathology" },
+    verifiedBy: { type: String },
     pathologistNotes: { type: String },
     pathologistInterpretation: { type: String },
     pathologistComments: { type: String },

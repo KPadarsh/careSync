@@ -15,6 +15,8 @@ import {
   PlusIcon,
   CheckIcon,
 } from "./NurseIcons";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 
 interface DashboardData {
   metrics: {
@@ -145,123 +147,63 @@ export const DashboardView: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-[#00355f]">Nurse Workstation</h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[11px] font-semibold uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-              Live Shift
-            </span>
+      <PageHeader
+        title="Nurse Workstation"
+        description={`Logged in as ${nurse.name} • ${nurse.station}`}
+        badge={{ label: "Live Shift", tone: "success" }}
+        action={
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={fetchDashboardData}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
+            >
+              <RefreshIcon size={14} className={refreshing ? "animate-spin text-teal-600" : "text-slate-500"} />
+              <span>{refreshing ? "Refreshing..." : "Refresh Queue"}</span>
+            </button>
+
+            <Link
+              href="/nurse/queue"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
+            >
+              <span>Open Patient Queue</span>
+              <ChevronRightIcon size={14} />
+            </Link>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Logged in as <strong className="font-semibold text-slate-700">{nurse.name}</strong> •{" "}
-            {nurse.station}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={fetchDashboardData}
-            disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
-          >
-            <RefreshIcon size={14} className={refreshing ? "animate-spin text-teal-600" : "text-slate-500"} />
-            <span>{refreshing ? "Refreshing..." : "Refresh Queue"}</span>
-          </button>
-
-          <Link
-            href="/nurse/queue"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
-          >
-            <span>Open Patient Queue</span>
-            <ChevronRightIcon size={14} />
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* 4 PRIMARY DASHBOARD TILES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Tile 1: Patients Waiting */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Patients Waiting
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-1.5">
-              <span className="text-3xl font-extrabold text-[#00355f]">{metrics.patientsWaiting}</span>
-              <span className="text-xs text-slate-500">for triage</span>
-            </div>
-            <span className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              <ClockIcon size={13} className="text-amber-500" />
-              <span>Awaiting vitals intake</span>
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#00355f] flex items-center justify-center">
-            <ClockIcon size={24} />
-          </div>
-        </div>
-
-        {/* Tile 2: Assessments Pending */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Assessments Pending
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-1.5">
-              <span className="text-3xl font-extrabold text-amber-600">{metrics.assessmentsPending}</span>
-              <span className="text-xs text-slate-500">in triage</span>
-            </div>
-            <span className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              <VitalsIcon size={13} className="text-amber-600" />
-              <span>Draft &amp; active evaluations</span>
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <AssessmentIcon size={24} />
-          </div>
-        </div>
-
-        {/* Tile 3: Ready for Doctor */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Ready for Doctor
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-1.5">
-              <span className="text-3xl font-extrabold text-[#006a61]">{metrics.readyForDoctor}</span>
-              <span className="text-xs text-slate-500">cleared</span>
-            </div>
-            <span className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              <CheckCircleIcon size={13} className="text-[#006a61]" />
-              <span>Triage notes finalized</span>
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-teal-50 text-[#006a61] flex items-center justify-center">
-            <CheckCircleIcon size={24} />
-          </div>
-        </div>
-
-        {/* Tile 4: Tasks Due */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Tasks Due
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-1.5">
-              <span className="text-3xl font-extrabold text-rose-600">{metrics.tasksDue}</span>
-              <span className="text-xs text-slate-500">pending</span>
-            </div>
-            <span className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              <TasksIcon size={13} className="text-rose-500" />
-              <span>Nursing responsibilities</span>
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-            <TasksIcon size={24} />
-          </div>
-        </div>
+        <StatCard
+          label="Patients Waiting"
+          value={metrics.patientsWaiting}
+          subtext="Awaiting vitals intake"
+          icon={<ClockIcon size={20} />}
+          tone="info"
+        />
+        <StatCard
+          label="Assessments Pending"
+          value={metrics.assessmentsPending}
+          subtext="Draft & active evaluations"
+          icon={<AssessmentIcon size={20} />}
+          tone="warning"
+        />
+        <StatCard
+          label="Ready for Doctor"
+          value={metrics.readyForDoctor}
+          subtext="Triage notes finalized"
+          icon={<CheckCircleIcon size={20} />}
+          tone="primary"
+        />
+        <StatCard
+          label="Tasks Due"
+          value={metrics.tasksDue}
+          subtext="Nursing responsibilities"
+          icon={<TasksIcon size={20} />}
+          tone={metrics.tasksDue > 0 ? "danger" : "default"}
+        />
       </div>
 
       {/* PATIENTS NEEDING ATTENTION (ALERT BANNER IF ANY) */}

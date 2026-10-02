@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireBillingSession } from "@/lib/auth";
-import { Payment, Patient, Invoice } from "@/models";
+import { Payment, Patient, Invoice, User } from "@/models";
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,8 +32,21 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
       const matchingPatients = await Patient.find({
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { mrn: { $regex: search, $options: "i" } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -52,18 +65,39 @@ export async function GET(req: NextRequest) {
     }
 
     const payments = await Payment.find(query)
-      .populate("patientId", "name mrn gender phone")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender phone userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("invoiceId", "invoiceNumber totalAmount balanceAmount status services")
       .sort({ paymentDate: -1, createdAt: -1 })
       .lean();
 
-    const totalCollected = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const formatted = payments.map((pmt: any) => {
+      const p = pmt.patientId;
+      const patientName =
+        p?.userId?.name ||
+        `${p?.firstName || ""} ${p?.lastName || ""}`.trim() ||
+        "Patient";
+      return {
+        ...pmt,
+        patientId: p
+          ? {
+              ...p,
+              name: patientName,
+            }
+          : null,
+      };
+    });
+
+    const totalCollected = formatted.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return NextResponse.json({
       success: true,
-      payments,
+      payments: formatted,
       stats: {
-        totalTransactions: payments.length,
+        totalTransactions: formatted.length,
         totalCollected,
       },
     });

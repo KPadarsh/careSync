@@ -17,7 +17,8 @@ interface VerifiedReportDetailViewProps {
 export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -30,14 +31,14 @@ export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewP
   const fetchVerifiedReport = async () => {
     try {
       setLoading(true);
-      setError(null);
+      setFetchError(null);
       const res = await fetch(`/api/pathologist/verified/${reportId}`);
       if (!res.ok) throw new Error("Failed to load verified report details.");
       const json = await res.json();
       setData(json.report);
       setUpdatedInterpretation(json.report.pathologistInterpretation || "");
     } catch (err: any) {
-      setError(err.message || "Failed to load report.");
+      setFetchError(err.message || "Failed to load report.");
     } finally {
       setLoading(false);
     }
@@ -50,13 +51,13 @@ export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewP
   const handleAmendReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amendmentReason.trim() || !updatedInterpretation.trim()) {
-      setError("Both an explicit amendment rationale and the updated interpretation are required.");
+      setActionError("Both an explicit amendment rationale and the updated interpretation are required.");
       return;
     }
 
     try {
       setSubmitting(true);
-      setError(null);
+      setActionError(null);
       const res = await fetch(`/api/pathologist/verified/${reportId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +76,7 @@ export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewP
       setAmendmentReason("");
       fetchVerifiedReport();
     } catch (err: any) {
-      setError(err.message);
+      setActionError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -96,12 +97,12 @@ export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewP
     );
   }
 
-  if (error && !data) {
+  if (fetchError || !data) {
     return (
       <div className="flex-1 p-10 flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-md">
           <p className="text-sm font-bold text-red-800">Certificate Error</p>
-          <p className="text-xs text-red-600 mt-1">{error}</p>
+          <p className="text-xs text-red-600 mt-1">{fetchError || "Certificate not found."}</p>
           <Link
             href="/pathologist/verified"
             className="mt-4 inline-block px-4 py-2 bg-[#00355f] text-white rounded-xl text-xs font-semibold"
@@ -149,6 +150,21 @@ export function VerifiedReportDetailView({ reportId }: VerifiedReportDetailViewP
         </div>
       </div>
 
+      {actionError && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start justify-between gap-2 print:hidden animate-in fade-in">
+          <div className="flex items-start gap-2">
+            <CheckCircleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-red-400 hover:text-red-700 font-bold px-1.5"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {successMsg && (
         <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 print:hidden">
           <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />

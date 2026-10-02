@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
               (Date.now() - new Date(r.patientId.dateOfBirth).getTime()) /
                 (365.25 * 24 * 60 * 60 * 1000)
             )
-          : 32;
+          : null;
 
         return {
           _id: r._id.toString(),
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
           verifiedDate: r.verifiedDate,
           status: r.status,
           summary: r.summary,
-          verifiedBy: r.verifiedBy || "Dr. Sunita Patil, MD Pathology",
+          verifiedBy: r.verifiedBy || "Consultant Pathologist",
           resultsCount: r.results?.length || 0,
           results: r.results || [],
           fileUrl: r.fileUrl,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
             mrn: r.patientId?.mrn || "MRN-N/A",
             age,
             gender: r.patientId?.gender || "male",
-            bloodGroup: r.patientId?.bloodGroup || "O+",
+            bloodGroup: r.patientId?.bloodGroup || "—",
             avatar: r.patientId?.userId?.avatar,
           },
         };

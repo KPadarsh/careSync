@@ -14,7 +14,11 @@ export async function GET(
     const { id } = await context.params;
 
     const prescription = await Prescription.findById(id)
-      .populate("patientId", "name mrn gender dateOfBirth bloodGroup phone address allergies emergencyContact")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender dateOfBirth bloodGroup phone address allergies emergencyContact userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department qualification roomNumber")
       .populate("dispensingRecordId")
       .lean();
@@ -24,6 +28,15 @@ export async function GET(
         { error: "Prescription not found" },
         { status: 404 }
       );
+    }
+
+    if (prescription.patientId) {
+      const p: any = prescription.patientId;
+      p.name =
+        (p.userId && typeof p.userId === "object" && p.userId.name) ||
+        `${p.firstName || ""} ${p.lastName || ""}`.trim() ||
+        p.name ||
+        "Patient";
     }
 
     // Check inventory availability for each medication
@@ -213,7 +226,7 @@ export async function PATCH(
           patientId: prescription.patientId,
           doctorId: prescription.doctorId,
           pharmacistId: session.user._id,
-          pharmacistName: session.user.name || "Deepak Varma, RPh",
+          pharmacistName: session.user.name || "Pharmacist",
           items,
           dispensedDate: new Date(),
           status: "preparing",

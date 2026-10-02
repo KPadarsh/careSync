@@ -1,18 +1,18 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/caresync";
+function getMongoUri(): string {
+  const envUri = process.env.MONGODB_URI?.trim();
+  if (envUri && !envUri.includes("localhost:27017")) {
+    return envUri;
+  }
+  return "mongodb+srv://adarshkp1128_db_user:mIFs9ZqUxN7lpegh@caresync.v6p2ckg.mongodb.net/caresync?appName=CareSync";
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
 }
 
-/**
- * In development mode, Next.js frequently reloads modules.
- * Caching the mongoose connection on global prevents opening
- * multiple simultaneous database connections.
- */
 declare global {
   var mongooseCache: MongooseCache | undefined;
 }
@@ -24,27 +24,44 @@ if (!global.mongooseCache) {
 }
 
 /**
- * Establishes or retrieves the existing MongoDB connection.
- * Note: This function only initiates a connection when called,
- * so importing this file will not connect to the database.
+ * Establishes or retrieves the existing MongoDB connection with connection pooling.
+ * Validates connection readiness and reconnects if dropped.
  */
 export async function connectToDatabase(): Promise<typeof mongoose> {
-  if (!MONGODB_URI) {
-    throw new Error(
-      "Please define the MONGODB_URI environment variable inside .env.local"
-    );
-  }
+  const uri = getMongoUri();
 
-  if (cached.conn) {
+  // If already connected and ready to Atlas, return existing connection immediately (0ms delay)
+  if (
+    cached.conn &&
+    mongoose.connection.readyState === 1 &&
+    !mongoose.connection.host?.includes("localhost") &&
+    !mongoose.connection.host?.includes("127.0.0.1")
+  ) {
     return cached.conn;
   }
 
-  if (!cached.promise) {
+  if (
+    mongoose.connection.readyState === 1 &&
+    (mongoose.connection.host?.includes("localhost") || mongoose.connection.host?.includes("127.0.0.1"))
+  ) {
+    console.log("[connectToDatabase] Disconnecting from localhost to connect to Atlas...");
+    await mongoose.disconnect();
+    cached.conn = null;
+    cached.promise = null;
+  }
+
+  // Re-establish connection if promise is missing or connection state is disconnected
+  if (!cached.promise || mongoose.connection.readyState === 0) {
     const opts: mongoose.ConnectOptions = {
-      bufferCommands: false,
+      bufferCommands: true,
+      maxPoolSize: 20,
+      minPoolSize: 5,
+      serverSelectionTimeoutMS: 8000,
+      socketTimeoutMS: 45000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+    cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
+      console.log("[connectToDatabase] Connected to:", mongooseInstance.connection.host, mongooseInstance.connection.name);
       return mongooseInstance;
     });
   }
@@ -53,6 +70,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
+    cached.conn = null;
     throw error;
   }
 

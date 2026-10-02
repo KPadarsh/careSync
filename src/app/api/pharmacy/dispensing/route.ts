@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePharmacySession } from "@/lib/auth";
-import { DispensingRecord, Prescription, Patient } from "@/models";
+import { DispensingRecord, Prescription, Patient, User } from "@/models";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +19,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      const matchingPatients = await Patient.find({
+      const matchingUsers = await User.find({
         name: { $regex: search, $options: "i" },
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
+      const matchingPatients = await Patient.find({
+        $or: [
+          { userId: { $in: userIds } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { mrn: { $regex: search, $options: "i" } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -32,12 +42,34 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const dispensingRecords = await DispensingRecord.find(query)
-      .populate("patientId", "name mrn gender dateOfBirth bloodGroup")
+    const rawDispensingRecords = await DispensingRecord.find(query)
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender dateOfBirth bloodGroup userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department")
       .populate("prescriptionId")
       .sort({ updatedAt: -1 })
       .lean();
+
+    const getPatientName = (patient: any) => {
+      if (!patient) return "Patient";
+      if (patient.userId && typeof patient.userId === "object" && patient.userId.name) {
+        return patient.userId.name;
+      }
+      if (patient.firstName || patient.lastName) {
+        return `${patient.firstName || ""} ${patient.lastName || ""}`.trim();
+      }
+      return patient.name || "Patient";
+    };
+
+    const dispensingRecords = rawDispensingRecords.map((rec: any) => {
+      if (rec.patientId) {
+        rec.patientId.name = getPatientName(rec.patientId);
+      }
+      return rec;
+    });
 
     return NextResponse.json({
       success: true,
@@ -85,7 +117,7 @@ export async function POST(req: NextRequest) {
       patientId: prescription.patientId,
       doctorId: prescription.doctorId,
       pharmacistId: session.user._id,
-      pharmacistName: session.user.name || "Deepak Varma, RPh",
+      pharmacistName: session.user.name || "Pharmacist",
       items: items || prescription.medications.map((m) => ({
         medicineName: m.medicine,
         dosage: m.dosage,

@@ -48,6 +48,13 @@ export function AppointmentsView() {
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+function formatYYYYMMDD(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
   // Booking form state
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -61,7 +68,7 @@ export function AppointmentsView() {
   const [bookingDate, setBookingDate] = useState<string>(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
+    return formatYYYYMMDD(tomorrow);
   });
   const [bookingTimeSlot, setBookingTimeSlot] = useState<string>("");
   const [bookingReason, setBookingReason] = useState<string>(() => {
@@ -86,27 +93,31 @@ export function AppointmentsView() {
   const [rescheduleSlots, setRescheduleSlots] = useState<{ time: string; available: boolean }[]>([]);
 
   // Load appointments
-  const fetchAppointments = () => {
-    fetch("/api/patient/appointments")
-      .then((res) => res.json())
-      .then((data) => {
+  const fetchAppointments = async () => {
+    try {
+      const res = await fetch("/api/patient/appointments");
+      if (res.ok) {
+        const data = await res.json();
         if (data.success && data.all) {
           setAppointments(data.all);
         }
-      })
-      .catch((err) => console.error("Error loading appointments:", err))
-      .finally(() => setLoading(false));
+      }
+    } catch (err) {
+      console.error("Error loading appointments:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchAppointments();
     // Load doctors and departments
     fetch("/api/patient/doctors")
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : { success: false }))
       .then((data) => {
-        if (data.success) {
+        if (data.success && data.doctors) {
           setDoctors(data.doctors);
-          setDepartments(["All", ...data.departments]);
+          setDepartments(["All", ...(data.departments || [])]);
           setSelectedDoctorId((prev) => prev || (data.doctors.length > 0 ? data.doctors[0]._id : ""));
         }
       })
@@ -574,30 +585,36 @@ export function AppointmentsView() {
 
                 {/* Doctors Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto p-1">
-                  {doctors
-                    .filter((d) => selectedDept === "All" || d.department === selectedDept)
-                    .map((doc) => (
-                      <div
-                        key={doc._id}
-                        onClick={() => setSelectedDoctorId(doc._id)}
-                        className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
-                          selectedDoctorId === doc._id
-                            ? "border-[#006a61] bg-[#89f5e7]/10 shadow-sm"
-                            : "border-[#e2e8f0] hover:border-[#131b2e]/40 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#eff4ff] flex items-center justify-center font-bold text-xs text-[#131b2e]">
-                            {doc.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-[#0b1c30]">{doc.name}</h4>
-                            <p className="text-xs text-[#006a61] font-medium">{doc.specialty}</p>
-                            <p className="text-[11px] text-[#45464d]">{doc.roomNumber}</p>
+                  {doctors.filter((d) => selectedDept === "All" || d.department === selectedDept).length === 0 ? (
+                    <div className="col-span-full py-8 text-center text-xs text-[#45464d]">
+                      No clinical specialists available in this department.
+                    </div>
+                  ) : (
+                    doctors
+                      .filter((d) => selectedDept === "All" || d.department === selectedDept)
+                      .map((doc) => (
+                        <div
+                          key={doc._id}
+                          onClick={() => setSelectedDoctorId(doc._id)}
+                          className={`p-4 rounded-xl border text-left cursor-pointer transition-all ${
+                            selectedDoctorId === doc._id
+                              ? "border-[#006a61] bg-[#89f5e7]/10 shadow-sm"
+                              : "border-[#e2e8f0] hover:border-[#131b2e]/40 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#eff4ff] flex items-center justify-center font-bold text-xs text-[#131b2e]">
+                              {doc.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-[#0b1c30]">{doc.name}</h4>
+                              <p className="text-xs text-[#006a61] font-medium">{doc.specialty}</p>
+                              <p className="text-[11px] text-[#45464d]">{doc.roomNumber}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-3 border-t border-[#e2e8f0]">
@@ -646,7 +663,7 @@ export function AppointmentsView() {
                     <input
                       type="date"
                       value={bookingDate}
-                      min={new Date().toISOString().split("T")[0]}
+                      min={formatYYYYMMDD()}
                       onChange={(e) => setBookingDate(e.target.value)}
                       required
                       className="w-full bg-[#eff4ff] border border-[#e2e8f0] rounded-lg px-3 py-2 text-xs text-[#0b1c30] focus:outline-none focus:ring-1 focus:ring-[#131b2e]"
@@ -818,7 +835,7 @@ export function AppointmentsView() {
                 <input
                   type="date"
                   value={rescheduleDate}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={formatYYYYMMDD()}
                   onChange={(e) => setRescheduleDate(e.target.value)}
                   required
                   className="w-full bg-[#eff4ff] border border-[#e2e8f0] rounded-lg px-3 py-2 text-xs text-[#0b1c30]"

@@ -162,7 +162,7 @@ export const NursingRecordsView: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap">
-                        {rec.nurseName || "Arun Mary, RN"}
+                        {rec.nurseName || "Staff Nurse"}
                       </td>
 
                       <td className="py-3.5 px-4 whitespace-nowrap">

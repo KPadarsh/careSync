@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePharmacySession } from "@/lib/auth";
-import { DispensingRecord, Prescription, Medicine, Notification } from "@/models";
+import { DispensingRecord, Prescription, Medicine, Notification, Patient } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(
   req: NextRequest,
@@ -49,7 +51,8 @@ export async function PATCH(
 
     const { id } = await context.params;
     const body = await req.json();
-    const { action, notes, items } = body;
+    const { action: rawAction, status, notes, items } = body;
+    const action = rawAction || (status === "completed" ? "complete" : status === "dispensed" ? "dispense" : status);
 
     const record = await DispensingRecord.findById(id);
     if (!record) {
@@ -116,7 +119,7 @@ export async function PATCH(
 
       record.status = action === "complete" ? "completed" : "dispensed";
       record.dispensedDate = new Date();
-      record.pharmacistName = session.user.name || "Deepak Varma, RPh";
+      record.pharmacistName = session.user.name || "Pharmacist";
       await record.save();
 
       // Update parent prescription status
@@ -126,6 +129,59 @@ export async function PATCH(
           pharmacistNotes: `Dispensed on ${new Date().toLocaleDateString()} by ${record.pharmacistName}.`,
         });
       }
+
+      // Notify billing specialists and patient via NotificationService
+      try {
+        const medNames = record.items.map((i) => i.medicineName).join(", ");
+        const patientDoc = await Patient.findById(record.patientId);
+        const patientName = patientDoc ? `${patientDoc.firstName} ${patientDoc.lastName}` : "Patient";
+
+        await NotificationService.notifyRole("BILLING_STAFF", {
+          title: "Prescription Dispensed",
+          message: `Medications (${medNames}) dispensed for ${patientName}. Ready for billing clearance.`,
+          type: "billing",
+          link: "/billing/invoices/new",
+          relatedResource: {
+            resourceType: "dispensing",
+            resourceId: record._id.toString(),
+          },
+        });
+
+        if (patientDoc?.userId) {
+          await NotificationService.createNotification({
+            recipientUserId: patientDoc.userId,
+            title: "Prescription Dispensed",
+            message: `Your prescription (${medNames}) has been prepared and dispensed by Pharmacist ${record.pharmacistName}.`,
+            type: "prescription",
+            link: "/patient/prescriptions",
+            relatedResource: {
+              resourceType: "dispensing",
+              resourceId: record._id.toString(),
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to notify billing and patient of dispensing:", notifErr);
+      }
+
+      // Record audit log
+      await logAuditEvent({
+        actor: {
+          userId: session.user._id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role,
+        },
+        action: "MEDICATIONS_DISPENSED",
+        resource: `Dispensing Record ${record.dispenseId}`,
+        resourceType: "dispensing",
+        metadata: {
+          dispenseId: record.dispenseId,
+          prescriptionId: record.prescriptionId,
+          patientId: record.patientId,
+          itemsCount: record.items?.length,
+        },
+      });
 
       return NextResponse.json({
         success: true,

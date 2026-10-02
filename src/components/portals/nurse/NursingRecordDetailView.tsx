@@ -100,7 +100,7 @@ export const NursingRecordDetailView: React.FC<NursingRecordDetailProps> = ({ re
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               Logged on {new Date(record.createdAt).toLocaleString()} by{" "}
-              <strong className="text-slate-800">{record.nurseName || "Arun Mary, RN"}</strong>
+              <strong className="text-slate-800">{record.nurseName || "Staff Nurse"}</strong>
             </p>
           </div>
         </div>

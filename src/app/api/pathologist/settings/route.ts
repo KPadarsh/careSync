@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       settings: {
         autoHighlightPanicValues: true,
         statNotificationSound: true,
-        electronicSignatureStamp: "Dr. Sunita Patil, MD Pathology [CERT-AUTHENTICATED]",
+        electronicSignatureStamp: `${session.user.name || "Consultant Pathologist"}, MD Pathology [CERT-AUTHENTICATED]`,
         includeReferenceRangeFootnotes: true,
         requireTwoFactorForCriticalCert: false,
         criticalAlertThresholds: {

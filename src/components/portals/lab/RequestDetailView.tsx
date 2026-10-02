@@ -34,7 +34,8 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
@@ -67,14 +68,14 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
         setResults(json.request.results);
       } else {
         // Pre-fill standard templates for common tests
-        const testName = json.request.testName.toLowerCase();
+        const testName = (json.request.testName || "").toLowerCase();
         if (testName.includes("troponin") || testName.includes("cardiac")) {
           setResults([
             { parameter: "High-Sensitivity Troponin I", value: "", unit: "ng/L", referenceRange: "< 14.0 (Normal), > 26.0 (Elevated)", flag: "normal" },
             { parameter: "CK-MB Isoenzyme", value: "", unit: "ng/mL", referenceRange: "0.0 - 5.0", flag: "normal" },
             { parameter: "Myoglobin", value: "", unit: "ng/mL", referenceRange: "28 - 72", flag: "normal" },
           ]);
-        } else if (testName.includes("cbc") || testName.includes("blood count")) {
+        } else if (testName.includes("cbc") || testName.includes("blood count") || testName.includes("hemogram")) {
           setResults([
             { parameter: "Hemoglobin", value: "", unit: "g/dL", referenceRange: "13.5 - 17.5", flag: "normal" },
             { parameter: "White Blood Cells (WBC)", value: "", unit: "x10³/µL", referenceRange: "4.5 - 11.0", flag: "normal" },
@@ -88,15 +89,22 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
             { parameter: "HDL Cholesterol", value: "", unit: "mg/dL", referenceRange: "> 40 (Normal)", flag: "normal" },
             { parameter: "LDL Cholesterol", value: "", unit: "mg/dL", referenceRange: "< 100 (Optimal)", flag: "normal" },
           ]);
+        } else if (testName.includes("blood test")) {
+          setResults([
+            { parameter: "Complete Blood Count / Hemoglobin", value: "", unit: "g/dL", referenceRange: "13.5 - 17.5", flag: "normal" },
+            { parameter: "Total Leukocyte Count (TLC)", value: "", unit: "cells/mcL", referenceRange: "4,000 - 11,000", flag: "normal" },
+            { parameter: "Platelet Count", value: "", unit: "x10³/µL", referenceRange: "150 - 450", flag: "normal" },
+            { parameter: "Random Blood Sugar (RBS)", value: "", unit: "mg/dL", referenceRange: "70 - 140", flag: "normal" },
+          ]);
         } else {
           setResults([
             { parameter: `${json.request.testName} Primary Assay`, value: "", unit: "Index / Value", referenceRange: "Normal Range", flag: "normal" },
           ]);
         }
       }
-      setError(null);
+      setFetchError(null);
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      setFetchError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -110,6 +118,7 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
     try {
       setSubmittingAction(true);
       setActionSuccessMsg(null);
+      setActionError(null);
       const res = await fetch(`/api/lab/requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -124,10 +133,35 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
       setActionSuccessMsg(resJson.message || "Action updated successfully.");
       await fetchDetail();
     } catch (err: any) {
-      setError(err.message || "Failed to execute action");
+      setActionError(err.message || "Failed to execute action");
     } finally {
       setSubmittingAction(false);
     }
+  };
+
+  const handleSaveResults = () => {
+    setActionError(null);
+    handleAction("save_results", {
+      results,
+      technicianNotes,
+    });
+  };
+
+  const handleSubmitForReview = () => {
+    setActionError(null);
+    if (!results || results.length === 0) {
+      setActionError("Please add at least one test result parameter before submitting for review.");
+      return;
+    }
+    const emptyRow = results.find((r) => !r.value || !r.value.trim());
+    if (emptyRow) {
+      setActionError(`Please enter a measured value for '${emptyRow.parameter || "all parameters"}' before submitting for Pathologist review.`);
+      return;
+    }
+    handleAction("submit_result_for_review", {
+      results,
+      technicianNotes,
+    });
   };
 
   const updateResultRow = (index: number, field: keyof ResultRow, val: string) => {
@@ -158,12 +192,12 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <AlertTriangleIcon size={24} className="text-rose-600" />
-          <span>{error || "Requisition not found."}</span>
+          <span>{fetchError || "Requisition not found."}</span>
         </div>
         <Link
           href="/lab/requests"
@@ -201,6 +235,41 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* ACTION ERROR ALERT BANNER */}
+      {actionError && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangleIcon size={18} className="text-rose-600 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="text-rose-500 hover:text-rose-800 p-1 text-sm font-bold"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* ACTION SUCCESS BANNER */}
+      {actionSuccessMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <CheckIcon size={18} className="text-emerald-600 shrink-0" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionSuccessMsg(null)}
+            className="text-emerald-500 hover:text-emerald-800 p-1 text-sm font-bold"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* BREADCRUMB NAVIGATION */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -365,7 +434,7 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
           <span className="font-bold">Technician Authorization Level</span>
           <span className="text-blue-800/80">
             You may collect specimens, record sample identifiers, execute instrument analysis, and submit results for review.
-            Pathology verification and final sign-off belong exclusively to Board Certified Pathologist Dr. Sunita Patil, MD.
+            Pathology verification and final sign-off belong exclusively to the Board Certified Pathologist.
           </span>
         </div>
       </div>
@@ -723,32 +792,22 @@ export const RequestDetailView: React.FC<RequestDetailViewProps> = ({ id }) => {
         <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() =>
-              handleAction("save_results", {
-                results,
-                technicianNotes,
-              })
-            }
+            onClick={handleSaveResults}
             disabled={submittingAction || currentStatus === "submitted_for_review" || currentStatus === "verified"}
             className="w-full sm:w-auto px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
           >
-            Save Draft Results
+            {submittingAction ? "Saving Draft..." : "Save Draft Results"}
           </button>
 
           {/* Action Required by prompt: Submit Result for Review */}
           <button
             type="button"
-            onClick={() =>
-              handleAction("submit_result_for_review", {
-                results,
-                technicianNotes,
-              })
-            }
+            onClick={handleSubmitForReview}
             disabled={submittingAction || results.length === 0 || currentStatus === "submitted_for_review" || currentStatus === "verified"}
             className="w-full sm:w-auto px-5 py-2.5 bg-[#006a68] hover:bg-[#00504e] text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <CheckIcon size={16} />
-            <span>Submit Result for Review</span>
+            <span>{submittingAction ? "Submitting..." : "Submit Result for Review"}</span>
           </button>
         </div>
       </div>

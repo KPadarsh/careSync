@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { ProfileView } from "@/components/portals/billing";
+import { BillingShell, ProfileView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Billing Staff Profile | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function ProfilePage() {
-  return <ProfileView />;
+  return (
+    <BillingShell>
+      <ProfileView />
+    </BillingShell>
+  );
 }

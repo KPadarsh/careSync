@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ArrowBackIcon,
   CheckCircleIcon,
@@ -275,10 +276,10 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-[#006194] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-[#565e74]">
+          <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+          <span className="text-xs font-medium text-slate-500">
             Opening active consultation encounter...
           </span>
         </div>
@@ -300,76 +301,69 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
   );
 
   return (
-    <div className="w-full px-4 sm:px-6 py-6 max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-10 right-8 z-50 flex items-center gap-3 px-4 py-3 bg-[#213145] text-white rounded-lg shadow-xl animate-fade-in">
-          <CheckCircleIcon className="w-5 h-5 text-[#7ffc97]" />
-          <span className="text-[13px] font-medium">{toastMessage}</span>
+        <div className="fixed bottom-10 right-8 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl shadow-xl border border-slate-700 animate-fade-in">
+          <CheckCircleIcon className="w-5 h-5 text-emerald-400" />
+          <span className="text-xs font-medium">{toastMessage}</span>
         </div>
       )}
 
-      {/* TOP BAR / NAVIGATION & ENCOUNTER ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          <Link
-            href="/doctor/queue"
-            className="inline-flex items-center gap-1 text-[13px] text-[#565e74] hover:text-[#006194] transition-colors font-medium"
-          >
-            <ArrowBackIcon className="w-4 h-4" />
-            <span>Today's Queue</span>
-          </Link>
-          <span className="text-[#bfc7d2]">•</span>
+      {/* Page Header */}
+      <PageHeader
+        title={patient?.name || "Consultation Encounter"}
+        description={`${patient?.mrn || "MRN-N/A"} • ${patient?.age ? `${patient.age}y ${patient.gender}` : "Encounter"} • Exam Room 04`}
+        badge={{ label: "In Consultation", tone: "info" }}
+        breadcrumbs={[
+          { label: "Doctor Portal", href: "/doctor/dashboard" },
+          { label: "Patient Queue", href: "/doctor/queue" },
+          { label: patient?.name || "Encounter" },
+        ]}
+        actions={
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-              {patient?.name || "Consultation"}
-            </h1>
-            <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-[#eff4ff] text-[#006194] font-semibold border border-[#bfc7d2]/30">
-              {patient?.mrn || "MRN-N/A"}
-            </span>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73]">
-              <span className="w-2 h-2 rounded-full bg-[#006194] animate-pulse" />
-              <span className="text-[11px] font-semibold">In Consultation</span>
-            </div>
+            <Link
+              href="/doctor/queue"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
+            >
+              <ArrowBackIcon className="w-4 h-4 text-slate-500" />
+              <span>Today's Queue</span>
+            </Link>
+            <button
+              onClick={handleSaveDraft}
+              disabled={saving}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
+            >
+              <SaveIcon className="w-4 h-4 text-slate-500" />
+              <span>Save Draft</span>
+            </button>
+            <button
+              onClick={() => setFinalizeModalOpen(true)}
+              disabled={saving}
+              type="button"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-xs transition-colors"
+            >
+              <CheckCircleIcon className="w-4 h-4" />
+              <span>Complete Consultation</span>
+            </button>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            type="button"
-            className="px-3.5 py-2 rounded-lg text-[13px] font-semibold text-[#0b1c30] bg-white border border-[#bfc7d2]/50 hover:bg-[#eff4ff] shadow-2xs transition-colors flex items-center gap-1.5"
-          >
-            <SaveIcon className="w-4 h-4 text-[#565e74]" />
-            <span>Save Draft</span>
-          </button>
-          <button
-            onClick={() => setFinalizeModalOpen(true)}
-            disabled={saving}
-            type="button"
-            className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#006194] hover:bg-[#007bb9] shadow-xs flex items-center gap-2 transition-colors"
-          >
-            <CheckCircleIcon className="w-4 h-4" />
-            <span>Complete Consultation</span>
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* PATIENT SNAPSHOT BANNER */}
-      <div className="w-full bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="w-full bg-white rounded-xl shadow-xs border border-slate-200/80 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Demographics & Safety Chips */}
         <div className="flex flex-wrap items-center gap-4 min-w-0">
-          <div className="flex items-center gap-3 pr-4 border-r border-[#bfc7d2]/30">
-            <div className="w-11 h-11 rounded-full bg-[#dae2fd] text-[#131b2e] flex items-center justify-center font-bold text-base shrink-0">
+          <div className="flex items-center gap-3 pr-4 border-r border-slate-200">
+            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-sm shrink-0">
               {initials}
             </div>
             <div className="flex flex-col">
-              <span className="text-[14px] font-semibold text-[#0b1c30] leading-tight">
+              <span className="text-xs sm:text-sm font-semibold text-slate-900 leading-tight">
                 {patient?.age} yrs • {patient?.gender}
               </span>
-              <span className="text-[11px] text-[#565e74] leading-tight mt-0.5">
+              <span className="text-[11px] text-slate-500 leading-tight mt-0.5">
                 Exam Room 04 • Visit 10:30 AM
               </span>
             </div>
@@ -377,23 +371,21 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
           {/* Allergy Chip */}
           {hasPenicillin ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ffdad6] text-[#ba1a1a]">
-              <AlertTriangleIcon className="w-4 h-4 text-[#ba1a1a]" />
-              <span className="text-[12px] font-bold">
-                Allergies: Penicillin (Anaphylaxis Risk)
-              </span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">
+              <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Allergies: Penicillin (Anaphylaxis Risk)</span>
             </div>
           ) : (
-            <span className="text-[12px] px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#565e74]">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-50 text-slate-600 border border-slate-200 font-medium">
               Allergies: None documented
             </span>
           )}
 
           <div className="flex items-center gap-2">
-            <span className="text-[12px] px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#565e74]">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
               Blood: {patient?.bloodGroup || "O+"}
             </span>
-            <span className="text-[12px] px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#565e74]">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
               Priority: {queue?.priority?.toUpperCase() || "NORMAL"}
             </span>
           </div>
@@ -401,123 +393,126 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
         {/* Live Triage Vitals Ribbon */}
         <div className="flex items-center gap-2.5 overflow-x-auto py-1">
-          <div className="px-3 py-1.5 rounded-lg bg-[#eff4ff] flex flex-col shrink-0">
-            <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold">
+          <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col shrink-0">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
               Blood Pressure
             </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[14px] font-bold text-[#0b1c30]">
-                {nurseVitals.bloodPressure || "120/80"}
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-sm font-bold text-slate-900">
+                {nurseVitals.bloodPressure || "—"}
               </span>
-              <span className="text-[10px] text-[#565e74]">mmHg</span>
+              <span className="text-[10px] text-slate-400">mmHg</span>
             </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-lg bg-[#eff4ff] flex flex-col shrink-0">
-            <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold">
+          <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col shrink-0">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
               Heart Rate
             </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[14px] font-bold text-[#0b1c30]">
-                {nurseVitals.heartRate || 72}
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-sm font-bold text-slate-900">
+                {nurseVitals.heartRate ?? "—"}
               </span>
-              <span className="text-[10px] text-[#565e74]">bpm</span>
+              <span className="text-[10px] text-slate-400">bpm</span>
             </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-lg bg-[#eff4ff] flex flex-col shrink-0">
-            <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold">
+          <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col shrink-0">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
               SpO2
             </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[14px] font-bold text-[#0b1c30]">
-                {nurseVitals.oxygenSaturation || 98}%
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-sm font-bold text-slate-900">
+                {nurseVitals.oxygenSaturation ? `${nurseVitals.oxygenSaturation}%` : "—"}
               </span>
-              <span className="text-[10px] text-[#00873a] font-semibold">Normal</span>
+              {nurseVitals.oxygenSaturation && (
+                <span className="text-[10px] text-emerald-600 font-semibold">Normal</span>
+              )}
             </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-lg bg-[#eff4ff] flex flex-col shrink-0">
-            <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold">
-              Temp
+          <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col shrink-0">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+              Temperature
             </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[14px] font-bold text-[#0b1c30]">
-                {nurseVitals.temperature || 98.6}
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-sm font-bold text-slate-900">
+                {nurseVitals.temperature ?? "—"}
               </span>
-              <span className="text-[10px] text-[#565e74]">°F</span>
+              <span className="text-[10px] text-slate-400">°F</span>
             </div>
           </div>
 
-          <div className="px-3 py-1.5 rounded-lg bg-[#eff4ff] flex flex-col shrink-0">
-            <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold">
+          <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col shrink-0">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
               Resp Rate
             </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[14px] font-bold text-[#0b1c30]">
-                {nurseVitals.respiratoryRate || 18}
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-sm font-bold text-slate-900">
+                {nurseVitals.respiratoryRate ?? "—"}
               </span>
-              <span className="text-[10px] text-[#565e74]">/min</span>
+              <span className="text-[10px] text-slate-400">/min</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* MAIN 2-COLUMN CLINICAL WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-16">
-        {/* LEFT COLUMN: Clinical Documentation (65% width / 8 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pb-12">
+        {/* LEFT COLUMN: Clinical Documentation (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {/* 1. Chief Complaint & HPI */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <StethoscopeIcon className="w-5 h-5 text-[#006194]" />
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <StethoscopeIcon className="w-4 h-4 text-slate-600" />
+                <h2 className="text-sm font-bold text-slate-900">
                   Chief Complaint & Present Illness
                 </h2>
               </div>
-              <span className="text-[11px] font-medium text-[#565e74] bg-white px-2 py-0.5 rounded-full border border-[#bfc7d2]/30">
-                Reported by Triage & Patient
+              <span className="text-[11px] font-medium text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
+                Triage & Patient Intake
               </span>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                 Chief Reason for Encounter
               </label>
               <input
                 type="text"
                 value={chiefComplaint}
                 onChange={(e) => setChiefComplaint(e.target.value)}
-                className="w-full p-2.5 bg-[#eff4ff]/60 rounded-lg text-[13px] text-[#0b1c30] font-medium border border-[#bfc7d2]/30 focus:outline-none focus:bg-white focus:border-[#006194]"
+                className="w-full px-3 py-2 bg-slate-50 rounded-lg text-xs sm:text-[13px] text-slate-900 font-medium border border-slate-200 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
+                placeholder="e.g. Subacute chest pressure and dyspnea on exertion"
               />
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider text-[#565e74]">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Physician HPI (History of Present Illness)
                 </label>
-                <span className="text-[11px] text-[#8ca0be]">Auto-saving draft</span>
+                <span className="text-[11px] text-slate-400">Auto-saved draft</span>
               </div>
               <textarea
                 value={historyOfPresentIllness}
                 onChange={(e) => setHistoryOfPresentIllness(e.target.value)}
                 rows={4}
-                className="w-full p-3 bg-white border border-[#bfc7d2]/50 rounded-lg text-[13px] text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#006194]/30 leading-relaxed transition-all"
-                placeholder="Type clinical presentation, duration, radiation, triggers..."
+                className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-[13px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 leading-relaxed transition-all placeholder:text-slate-400"
+                placeholder="Type clinical presentation, duration, radiation, triggers, aggravating factors..."
               />
             </div>
           </section>
 
           {/* 2. Objective Clinical Examination */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#006194] text-white flex items-center justify-center text-[11px] font-bold">
+                <span className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold">
                   OE
                 </span>
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <h2 className="text-sm font-bold text-slate-900">
                   Objective Clinical Examination
                 </h2>
               </div>
@@ -525,14 +520,14 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                 <button
                   type="button"
                   onClick={insertCardioTemplate}
-                  className="px-2.5 py-1 rounded text-[12px] font-semibold text-[#006194] bg-[#cce5ff] hover:bg-[#93ccff] transition-colors"
+                  className="px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-colors"
                 >
                   + Normal Cardio Template
                 </button>
                 <button
                   type="button"
                   onClick={() => setClinicalExamination("")}
-                  className="px-2 py-1 rounded text-[11px] text-[#565e74] hover:text-[#ba1a1a] transition-colors"
+                  className="px-2 py-1 rounded text-xs text-slate-400 hover:text-rose-600 transition-colors"
                 >
                   Clear
                 </button>
@@ -543,42 +538,42 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               value={clinicalExamination}
               onChange={(e) => setClinicalExamination(e.target.value)}
               rows={5}
-              className="w-full p-3 bg-white border border-[#bfc7d2]/50 rounded-lg text-[13px] text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#006194]/30 leading-relaxed transition-all"
-              placeholder="Document physical examination findings..."
+              className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-[13px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 leading-relaxed transition-all placeholder:text-slate-400 font-normal"
+              placeholder="Document physical examination findings, system-by-system auscultation, murmurs..."
             />
           </section>
 
-          {/* 3. Diagnosis (Searchable & Structured) */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          {/* 3. Diagnosis & Differentials */}
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#006194] text-white flex items-center justify-center text-[11px] font-bold">
+                <span className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold">
                   Dx
                 </span>
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <h2 className="text-sm font-bold text-slate-900">
                   Diagnosis & Differentials (ICD-10)
                 </h2>
               </div>
-              <span className="text-[11px] text-[#565e74]">
-                Verified coding index
+              <span className="text-xs text-slate-500">
+                Verified clinical indexing
               </span>
             </div>
 
             {/* Primary Diagnosis */}
             <div>
-              <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                 Primary Clinical Diagnosis
               </label>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-[#eff4ff]/60 border border-[#bfc7d2]/30">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80">
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-[#006194] text-white flex items-center justify-center text-[12px] font-bold">
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
                     1
                   </span>
                   <div>
-                    <span className="text-[14px] font-bold text-[#0b1c30]">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900">
                       {diagnosis}
                     </span>
-                    <span className="ml-2 text-[11px] px-2 py-0.5 rounded bg-[#cce5ff] text-[#004b73] font-semibold">
+                    <span className="ml-2 text-[11px] px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-200 font-semibold font-mono">
                       ICD-10: {icdCode || "R07.89"}
                     </span>
                   </div>
@@ -588,20 +583,20 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
             {/* Secondary & Differential Diagnoses */}
             <div>
-              <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                 Secondary & Differential Diagnoses
               </label>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 {differentialDiagnoses.map((diff, idx) => (
                   <div
                     key={idx}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#eff4ff] text-[#0b1c30] text-[12px] font-medium border border-[#bfc7d2]/30 shadow-2xs"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-800 text-xs font-medium border border-slate-200 shadow-2xs"
                   >
                     <span>{diff}</span>
                     <button
                       type="button"
                       onClick={() => removeDifferential(idx)}
-                      className="text-[#565e74] hover:text-[#ba1a1a]"
+                      className="text-slate-400 hover:text-rose-600 transition-colors"
                     >
                       <CloseIcon className="w-3.5 h-3.5" />
                     </button>
@@ -617,12 +612,12 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   onChange={(e) => setNewDifferential(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addDifferential(e)}
                   placeholder="+ Add Differential / ICD-10 Search (e.g. Costochondritis, Musculoskeletal)..."
-                  className="flex-1 h-9 px-3 bg-[#eff4ff] border border-[#bfc7d2]/40 rounded-lg text-[12px] text-[#0b1c30] focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="flex-1 h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={addDifferential}
-                  className="h-9 px-3 rounded-lg bg-[#006194] text-white text-[12px] font-semibold hover:bg-[#007bb9]"
+                  className="h-9 px-4 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors shadow-2xs"
                 >
                   Add
                 </button>
@@ -631,17 +626,17 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
           </section>
 
           {/* 4. Treatment Plan & Patient Guidance */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#006194] text-white flex items-center justify-center text-[11px] font-bold">
+                <span className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[11px] font-bold">
                   Rx
                 </span>
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <h2 className="text-sm font-bold text-slate-900">
                   Treatment Plan & Patient Guidance
                 </h2>
               </div>
-              <span className="text-[11px] text-[#565e74]">
+              <span className="text-xs text-slate-500">
                 Printed on Consultation Summary
               </span>
             </div>
@@ -650,30 +645,30 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               value={treatmentPlan}
               onChange={(e) => setTreatmentPlan(e.target.value)}
               rows={5}
-              className="w-full p-3 bg-white border border-[#bfc7d2]/50 rounded-lg text-[13px] text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#006194]/30 leading-relaxed transition-all"
-              placeholder="Specify instructions, lifestyle guidelines, red-flag protocols..."
+              className="w-full p-3 bg-white border border-slate-200 rounded-lg text-xs sm:text-[13px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 leading-relaxed transition-all placeholder:text-slate-400"
+              placeholder="Specify instructions, lifestyle guidelines, red-flag return precautions, diet..."
             />
           </section>
         </div>
 
-        {/* RIGHT COLUMN: Orders, Prescriptions, Follow-up (35% width / 4 cols) */}
+        {/* RIGHT COLUMN: Orders, Prescriptions, Follow-up (4 cols) */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           {/* 5. Prescription Builder */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <PrescriptionsIcon className="w-5 h-5 text-[#006194]" />
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <PrescriptionsIcon className="w-4 h-4 text-slate-600" />
+                <h2 className="text-sm font-bold text-slate-900">
                   Prescription
                 </h2>
               </div>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73]">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                 {medications.length} Medicines
               </span>
             </div>
 
             {/* Allergy Safety Badge */}
-            <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 flex items-center gap-2">
+            <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-2">
               <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="text-[11px] font-medium leading-tight">
                 Allergy Check: Verified Safe (No Beta-Lactam class ordered).
@@ -683,40 +678,40 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
             {/* Medicine Cards */}
             <div className="flex flex-col gap-2.5">
               {medications.length === 0 ? (
-                <p className="text-[12px] text-[#565e74] italic text-center py-2">
-                  No medications added.
+                <p className="text-xs text-slate-400 italic text-center py-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  No medications added to regimen yet.
                 </p>
               ) : (
                 medications.map((m, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-[#eff4ff]/50 rounded-lg flex flex-col gap-1 border border-[#bfc7d2]/30"
+                    className="p-3 bg-slate-50/80 rounded-xl flex flex-col gap-1 border border-slate-200/80"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="text-[13px] font-semibold text-[#0b1c30]">
+                        <span className="text-xs sm:text-[13px] font-semibold text-slate-900">
                           {m.medicine}
                         </span>
-                        <span className="text-[11px] text-[#565e74] block">
+                        <span className="text-[11px] text-slate-500 block">
                           {m.dosage} • {m.frequency}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeMedication(idx)}
-                        className="text-[#565e74] hover:text-[#ba1a1a] p-1"
+                        className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
                         title="Remove medicine"
                       >
                         <CloseIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 text-[#565e74] text-[11px]">
-                      <span className="px-1.5 py-0.5 bg-white rounded border border-[#bfc7d2]/30">
+                    <div className="flex items-center gap-2 text-slate-500 text-[11px] mt-1">
+                      <span className="px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700 font-medium">
                         Duration: {m.duration}
                       </span>
                     </div>
                     {m.instructions && (
-                      <p className="text-[11px] text-[#565e74] mt-1 bg-white p-2 rounded border border-[#bfc7d2]/20 italic">
+                      <p className="text-[11px] text-slate-600 mt-1 bg-white p-2 rounded-lg border border-slate-200 italic">
                         "{m.instructions}"
                       </p>
                     )}
@@ -728,61 +723,61 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
             <button
               type="button"
               onClick={() => setAddMedicineModalOpen(true)}
-              className="w-full py-2 rounded-lg text-[12px] font-semibold text-[#006194] bg-[#eff4ff] hover:bg-[#cce5ff] transition-colors flex items-center justify-center gap-1"
+              className="w-full py-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-4 h-4 text-slate-500" />
               <span>Add Medicine</span>
             </button>
           </section>
 
           {/* 6. Lab & Diagnostic Orders */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <LabIcon className="w-5 h-5 text-[#006194]" />
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <LabIcon className="w-4 h-4 text-slate-600" />
+                <h2 className="text-sm font-bold text-slate-900">
                   Lab & Diagnostic Orders
                 </h2>
               </div>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#cce5ff] text-[#004b73]">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                 {labOrders.length} Orders
               </span>
             </div>
 
             <div className="flex flex-col gap-2">
               {labOrders.length === 0 ? (
-                <p className="text-[12px] text-[#565e74] italic text-center py-2">
+                <p className="text-xs text-slate-400 italic text-center py-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">
                   No diagnostic tests requested.
                 </p>
               ) : (
                 labOrders.map((order, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-[#eff4ff]/50 rounded-lg flex items-start justify-between gap-2 border border-[#bfc7d2]/30"
+                    className="p-3 bg-slate-50/80 rounded-xl flex items-start justify-between gap-2 border border-slate-200/80"
                   >
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-[#0b1c30]">
+                        <span className="text-xs sm:text-[13px] font-semibold text-slate-900">
                           {order.testName}
                         </span>
                         {order.priority === "urgent" || order.priority === "stat" ? (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a]">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
                             Urgent
                           </span>
                         ) : (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white text-[#565e74] border border-[#bfc7d2]/30">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-white text-slate-600 border border-slate-200">
                             Routine
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-[#565e74] mt-0.5">
+                      <span className="text-[11px] text-slate-500 mt-0.5">
                         Reason: {order.reason}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeLabOrder(idx)}
-                      className="text-[#565e74] hover:text-[#ba1a1a]"
+                      className="text-slate-400 hover:text-rose-600 transition-colors"
                     >
                       <CloseIcon className="w-3.5 h-3.5" />
                     </button>
@@ -791,47 +786,47 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               )}
             </div>
 
-            <p className="text-[11px] text-[#8ca0be] italic">
+            <p className="text-[11px] text-slate-400 italic">
               Dispatches directly to Lab Technician queue.
             </p>
 
             <button
               type="button"
               onClick={() => setAddLabModalOpen(true)}
-              className="w-full py-2 rounded-lg text-[12px] font-semibold text-[#006194] bg-[#eff4ff] hover:bg-[#cce5ff] transition-colors flex items-center justify-center gap-1"
+              className="w-full py-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-4 h-4 text-slate-500" />
               <span>Request Diagnostic Test</span>
             </button>
           </section>
 
           {/* 7. Follow-up Scheduling */}
-          <section className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 bg-[#eff4ff]/60 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-[#bfc7d2]/20">
+          <section className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 bg-slate-50/80 -mx-5 -mt-5 p-4 rounded-t-xl border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <FollowUpsIcon className="w-5 h-5 text-[#006194]" />
-                <h2 className="text-[15px] font-bold text-[#0b1c30]">
+                <FollowUpsIcon className="w-4 h-4 text-slate-600" />
+                <h2 className="text-sm font-bold text-slate-900">
                   Follow-up Scheduling
                 </h2>
               </div>
-              <span className="text-[11px] text-[#565e74]">
+              <span className="text-xs text-slate-500">
                 Reception Queue
               </span>
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#0b1c30]">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs sm:text-[13px] text-slate-700 hover:text-slate-900">
                 <input
                   type="radio"
                   name="followup"
                   checked={!followUpNeeded}
                   onChange={() => setFollowUpNeeded(false)}
-                  className="w-4 h-4 text-[#006194]"
+                  className="w-4 h-4 text-slate-900 focus:ring-slate-900"
                 />
                 <span>No follow-up needed</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#0b1c30]">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs sm:text-[13px] text-slate-700 hover:text-slate-900">
                 <input
                   type="radio"
                   name="followup"
@@ -840,12 +835,12 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                     setFollowUpNeeded(true);
                     setFollowUpTimeframe("1 week");
                   }}
-                  className="w-4 h-4 text-[#006194]"
+                  className="w-4 h-4 text-slate-900 focus:ring-slate-900"
                 />
                 <span>Follow-up in 1 week (Cardiac Biomarker & ECG review)</span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#0b1c30]">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs sm:text-[13px] text-slate-700 hover:text-slate-900">
                 <input
                   type="radio"
                   name="followup"
@@ -854,22 +849,22 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                     setFollowUpNeeded(true);
                     setFollowUpTimeframe("2 weeks");
                   }}
-                  className="w-4 h-4 text-[#006194]"
+                  className="w-4 h-4 text-slate-900 focus:ring-slate-900"
                 />
                 <span>Follow-up in 2 weeks</span>
               </label>
 
               {followUpNeeded && (
-                <div className="mt-2 flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider">
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     Instructions for Receptionist
                   </label>
                   <input
                     type="text"
                     value={followUpInstructions}
                     onChange={(e) => setFollowUpInstructions(e.target.value)}
-                    placeholder="Book 20-min consultation slot with Dr. Anil Kumar..."
-                    className="w-full h-8 px-2.5 bg-[#eff4ff] border border-[#bfc7d2]/40 rounded-lg text-[12px] text-[#0b1c30] focus:outline-none focus:bg-white focus:border-[#006194]"
+                    placeholder="Book 20-min follow-up consultation slot..."
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors"
                   />
                 </div>
               )}
@@ -880,38 +875,38 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
       {/* FINALIZE CONSULTATION MODAL */}
       {finalizeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-5 border border-[#bfc7d2]/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 flex flex-col gap-5 border border-slate-200">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#cce5ff] flex items-center justify-center shrink-0 text-[#006194]">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200">
                 <CheckCircleIcon className="w-6 h-6" />
               </div>
               <div className="flex flex-col gap-1 min-w-0">
-                <h3 className="text-lg font-bold text-[#0b1c30]">
+                <h3 className="text-base font-bold text-slate-900">
                   Complete this consultation?
                 </h3>
-                <p className="text-[13px] text-[#565e74] leading-relaxed">
-                  Make sure the diagnosis, treatment plan, and required diagnostic orders are verified. Once finalized, this clinical encounter will be signed by Dr. Anil Kumar, committed to {patient?.name}'s electronic health record, and transmitted to Pharmacy and Laboratory.
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Make sure the diagnosis, treatment plan, and required diagnostic orders are verified. Once finalized, this clinical encounter will be signed by attending physician, committed to {patient?.name}&apos;s electronic health record, and transmitted to Pharmacy and Laboratory.
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-[#eff4ff] rounded-lg flex flex-col gap-2 text-[12px]">
-              <div className="flex justify-between items-center text-[#565e74]">
-                <span className="uppercase tracking-wider font-semibold">Patient</span>
-                <span className="font-bold text-[#0b1c30]">{patient?.name} ({patient?.mrn})</span>
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col gap-2.5 text-xs">
+              <div className="flex justify-between items-center text-slate-500">
+                <span className="uppercase tracking-wider font-semibold text-[10px]">Patient</span>
+                <span className="font-bold text-slate-900">{patient?.name} ({patient?.mrn})</span>
               </div>
-              <div className="flex justify-between items-center text-[#565e74]">
-                <span className="uppercase tracking-wider font-semibold">Primary Diagnosis</span>
-                <span className="font-semibold text-[#006194]">{diagnosis} ({icdCode})</span>
+              <div className="flex justify-between items-center text-slate-500">
+                <span className="uppercase tracking-wider font-semibold text-[10px]">Primary Diagnosis</span>
+                <span className="font-semibold text-slate-900">{diagnosis} ({icdCode})</span>
               </div>
-              <div className="flex justify-between items-center text-[#565e74]">
-                <span className="uppercase tracking-wider font-semibold">Prescriptions Queued</span>
-                <span className="font-medium text-[#0b1c30]">{medications.length} Medicines</span>
+              <div className="flex justify-between items-center text-slate-500">
+                <span className="uppercase tracking-wider font-semibold text-[10px]">Prescriptions Queued</span>
+                <span className="font-medium text-slate-900">{medications.length} Medicines</span>
               </div>
-              <div className="flex justify-between items-center text-[#565e74]">
-                <span className="uppercase tracking-wider font-semibold">Diagnostic Orders</span>
-                <span className="font-medium text-[#0b1c30]">{labOrders.length} Tests</span>
+              <div className="flex justify-between items-center text-slate-500">
+                <span className="uppercase tracking-wider font-semibold text-[10px]">Diagnostic Orders</span>
+                <span className="font-medium text-slate-900">{labOrders.length} Tests</span>
               </div>
             </div>
 
@@ -919,7 +914,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               <button
                 type="button"
                 onClick={() => setFinalizeModalOpen(false)}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-[#565e74] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
                 Cancel & Continue Editing
               </button>
@@ -927,7 +922,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                 type="button"
                 onClick={handleFinalize}
                 disabled={saving}
-                className="px-4 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#006194] hover:bg-[#007bb9] shadow-xs flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-xs flex items-center gap-1.5 transition-colors"
               >
                 <CheckCircleIcon className="w-4 h-4" />
                 <span>Confirm & Finalize</span>
@@ -939,16 +934,19 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
       {/* ADD MEDICATION MODAL */}
       {addMedicineModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-4 border border-[#bfc7d2]/40">
-            <div className="flex items-center justify-between pb-2 border-b border-[#bfc7d2]/30">
-              <h3 className="text-base font-bold text-[#0b1c30]">
-                Add Medication to Regimen
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 flex flex-col gap-4 border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <PrescriptionsIcon className="w-4 h-4 text-slate-600" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  Add Medication to Regimen
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setAddMedicineModalOpen(false)}
-                className="text-[#565e74] hover:text-[#ba1a1a]"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -956,7 +954,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
             <form onSubmit={handleAddMedication} className="flex flex-col gap-3">
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Medicine Name & Strength *
                 </label>
                 <input
@@ -965,13 +963,13 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="e.g. Atorvastatin 20mg or Metoprolol 25mg"
                   value={newMed.medicine}
                   onChange={(e) => setNewMed({ ...newMed, medicine: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                     Dosage
                   </label>
                   <input
@@ -979,17 +977,17 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                     placeholder="1 tablet"
                     value={newMed.dosage}
                     onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })}
-                    className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                    className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                     Frequency
                   </label>
                   <select
                     value={newMed.frequency}
                     onChange={(e) => setNewMed({ ...newMed, frequency: e.target.value })}
-                    className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[12px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                    className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                   >
                     <option value="Once Daily (Morning)">Once Daily (Morning)</option>
                     <option value="Once Daily (Night)">Once Daily (Night)</option>
@@ -1001,7 +999,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Duration
                 </label>
                 <input
@@ -1009,12 +1007,12 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="e.g. 7 days, 14 days, 30 days"
                   value={newMed.duration}
                   onChange={(e) => setNewMed({ ...newMed, duration: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Special Instructions
                 </label>
                 <input
@@ -1022,21 +1020,21 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="Take after meals with plenty of water"
                   value={newMed.instructions}
                   onChange={(e) => setNewMed({ ...newMed, instructions: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#bfc7d2]/30">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setAddMedicineModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-[12px] text-[#565e74] hover:bg-[#eff4ff]"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-[#006194] hover:bg-[#007bb9]"
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-xs"
                 >
                   Add to Prescription
                 </button>
@@ -1048,16 +1046,19 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
       {/* ADD LAB ORDER MODAL */}
       {addLabModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6 flex flex-col gap-4 border border-[#bfc7d2]/40">
-            <div className="flex items-center justify-between pb-2 border-b border-[#bfc7d2]/30">
-              <h3 className="text-base font-bold text-[#0b1c30]">
-                Request Diagnostic Test
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 flex flex-col gap-4 border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <LabIcon className="w-4 h-4 text-slate-600" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  Request Diagnostic Test
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setAddLabModalOpen(false)}
-                className="text-[#565e74] hover:text-[#ba1a1a]"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -1065,7 +1066,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
             <form onSubmit={handleAddLabOrder} className="flex flex-col gap-3">
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Test Name *
                 </label>
                 <input
@@ -1074,12 +1075,12 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="e.g. 2D Echocardiogram, Complete Blood Count, HbA1c"
                   value={newLab.testName}
                   onChange={(e) => setNewLab({ ...newLab, testName: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Clinical Indication / Reason
                 </label>
                 <input
@@ -1087,18 +1088,18 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="e.g. Evaluate ST-T elevation; risk stratification"
                   value={newLab.reason}
                   onChange={(e) => setNewLab({ ...newLab, reason: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Priority
                 </label>
                 <select
                   value={newLab.priority}
                   onChange={(e) => setNewLab({ ...newLab, priority: e.target.value as any })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[12px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 >
                   <option value="routine">Routine</option>
                   <option value="urgent">Urgent (Today)</option>
@@ -1107,7 +1108,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-[#565e74] uppercase tracking-wider block mb-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Technician Instructions
                 </label>
                 <input
@@ -1115,21 +1116,21 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                   placeholder="Fasting sample required; notify doctor on verification"
                   value={newLab.instructions}
                   onChange={(e) => setNewLab({ ...newLab, instructions: e.target.value })}
-                  className="w-full h-9 px-3 bg-[#eff4ff] rounded-lg text-[13px] text-[#0b1c30] border border-[#bfc7d2]/40 focus:outline-none focus:bg-white focus:border-[#006194]"
+                  className="w-full h-9 px-3 bg-slate-50 rounded-lg text-xs text-slate-900 border border-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#bfc7d2]/30">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setAddLabModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-[12px] text-[#565e74] hover:bg-[#eff4ff]"
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg text-[12px] font-semibold text-white bg-[#006194] hover:bg-[#007bb9]"
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-xs"
                 >
                   Queue Lab Order
                 </button>

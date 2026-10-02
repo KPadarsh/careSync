@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
-export interface IInvoiceServiceItem {
+export interface IInvoiceItem {
   serviceName: string;
-  category: string; // "consultation" | "laboratory" | "pharmacy" | "radiology" | "nursing" | "procedure" | "room" | "other"
+  category: string;
   quantity: number;
   unitPrice: number;
   subtotal: number;
@@ -10,6 +10,10 @@ export interface IInvoiceServiceItem {
 }
 
 export type InvoiceStatus =
+  | "UNPAID"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "CANCELLED"
   | "draft"
   | "issued"
   | "pending"
@@ -19,27 +23,33 @@ export type InvoiceStatus =
   | "cancelled";
 
 export interface IInvoice extends Document {
-  invoiceNumber: string; // e.g. "INV-2026-00101"
+  invoiceId: string;
+  invoiceNumber?: string;
   patientId: Types.ObjectId;
+  encounterId?: Types.ObjectId;
   doctorId?: Types.ObjectId;
-  date: Date;
-  dueDate: Date;
-  services: IInvoiceServiceItem[];
-  subtotalAmount: number;
-  discountAmount: number;
-  taxAmount: number;
-  totalAmount: number;
+  items: IInvoiceItem[];
+  services: IInvoiceItem[]; // Kept non-optional for existing billing API routes
+  subtotal: number;
+  subtotalAmount?: number;
+  discount: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  total: number;
+  totalAmount: number; // Kept non-optional for existing billing API routes
   paidAmount: number;
   balanceAmount: number;
   status: InvoiceStatus;
+  date?: Date;
+  dueDate: Date; // Kept non-optional for existing billing API routes
   notes?: string;
   createdBy?: Types.ObjectId;
-  createdByName: string;
+  createdByName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const InvoiceServiceItemSchema = new Schema<IInvoiceServiceItem>(
+const InvoiceItemSchema = new Schema<IInvoiceItem>(
   {
     serviceName: { type: String, required: true, trim: true },
     category: {
@@ -58,12 +68,20 @@ const InvoiceServiceItemSchema = new Schema<IInvoiceServiceItem>(
 
 const InvoiceSchema = new Schema<IInvoice>(
   {
-    invoiceNumber: {
+    invoiceId: {
       type: String,
       required: true,
       unique: true,
+      uppercase: true,
       trim: true,
       index: true,
+      default: function (this: IInvoice) {
+        return `INV-${Math.floor(10000 + Math.random() * 90000)}`;
+      },
+    },
+    invoiceNumber: {
+      type: String,
+      trim: true,
     },
     patientId: {
       type: Schema.Types.ObjectId,
@@ -71,14 +89,95 @@ const InvoiceSchema = new Schema<IInvoice>(
       required: true,
       index: true,
     },
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
+      index: true,
+    },
     doctorId: {
       type: Schema.Types.ObjectId,
       ref: "Doctor",
       index: true,
     },
+    items: {
+      type: [InvoiceItemSchema],
+      required: true,
+      default: [],
+    },
+    services: {
+      type: [InvoiceItemSchema],
+      required: true,
+      default: [],
+    },
+    subtotal: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    subtotalAmount: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    total: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    paidAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    balanceAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+    status: {
+      type: String,
+      enum: [
+        "UNPAID",
+        "PARTIALLY_PAID",
+        "PAID",
+        "CANCELLED",
+        "draft",
+        "issued",
+        "pending",
+        "partially_paid",
+        "paid",
+        "overdue",
+        "cancelled",
+      ],
+      default: "UNPAID",
+      index: true,
+    },
     date: {
       type: Date,
-      required: true,
       default: Date.now,
       index: true,
     },
@@ -88,40 +187,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       index: true,
     },
-    services: {
-      type: [InvoiceServiceItemSchema],
-      required: true,
-      validate: {
-        validator: (v: IInvoiceServiceItem[]) => v.length > 0,
-        message: "An invoice must contain at least one billable service.",
-      },
-    },
-    subtotalAmount: { type: Number, required: true, min: 0 },
-    discountAmount: { type: Number, default: 0, min: 0 },
-    taxAmount: { type: Number, default: 0, min: 0 },
-    totalAmount: { type: Number, required: true, min: 0 },
-    paidAmount: { type: Number, default: 0, min: 0 },
-    balanceAmount: { type: Number, required: true, min: 0 },
-    status: {
-      type: String,
-      enum: [
-        "draft",
-        "issued",
-        "pending",
-        "partially_paid",
-        "paid",
-        "overdue",
-        "cancelled",
-      ],
-      default: "pending",
-      index: true,
-    },
     notes: { type: String, trim: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     createdByName: {
       type: String,
-      required: true,
-      default: "Meera Nair, Billing Specialist",
+      default: "Billing Specialist",
       trim: true,
     },
   },
@@ -130,31 +200,51 @@ const InvoiceSchema = new Schema<IInvoice>(
   }
 );
 
-// Pre-save hook to calculate subtotal, total, and balance amounts reliably
 InvoiceSchema.pre<IInvoice>("save", function () {
-  const calculatedSubtotal = this.services.reduce(
-    (acc, curr) => acc + (curr.quantity * curr.unitPrice),
+  if (!this.invoiceNumber && this.invoiceId) {
+    this.invoiceNumber = this.invoiceId;
+  }
+  if (!this.invoiceId && this.invoiceNumber) {
+    this.invoiceId = this.invoiceNumber;
+  }
+
+  // Sync items and services
+  if ((!this.items || this.items.length === 0) && this.services && this.services.length > 0) {
+    this.items = [...this.services];
+  } else if ((!this.services || this.services.length === 0) && this.items && this.items.length > 0) {
+    this.services = [...this.items];
+  }
+
+  const calculatedSubtotal = (this.items || []).reduce(
+    (acc, curr) => acc + curr.quantity * curr.unitPrice,
     0
   );
+  this.subtotal = calculatedSubtotal;
   this.subtotalAmount = calculatedSubtotal;
-  this.totalAmount = Math.max(
-    0,
-    calculatedSubtotal - (this.discountAmount || 0) + (this.taxAmount || 0)
-  );
-  this.balanceAmount = Math.max(0, this.totalAmount - (this.paidAmount || 0));
 
-  if (this.status !== "cancelled" && this.status !== "draft") {
-    if (this.balanceAmount === 0 && this.totalAmount > 0) {
-      this.status = "paid";
+  const disc = this.discount ?? this.discountAmount ?? 0;
+  this.discount = disc;
+  this.discountAmount = disc;
+
+  const tax = this.taxAmount || 0;
+  const tot = Math.max(0, calculatedSubtotal - disc + tax);
+  this.total = tot;
+  this.totalAmount = tot;
+
+  this.balanceAmount = Math.max(0, tot - (this.paidAmount || 0));
+
+  if (this.status !== "CANCELLED" && this.status !== "cancelled" && this.status !== "draft") {
+    if (this.balanceAmount === 0 && this.total > 0) {
+      this.status = "PAID";
     } else if (this.paidAmount > 0 && this.balanceAmount > 0) {
-      this.status = "partially_paid";
-    } else if (this.dueDate && new Date() > this.dueDate && this.balanceAmount > 0) {
-      this.status = "overdue";
+      this.status = "PARTIALLY_PAID";
     } else if (this.paidAmount === 0) {
-      this.status = "pending";
+      this.status = "UNPAID";
     }
   }
 });
+
+InvoiceSchema.index({ patientId: 1, date: -1 });
 
 export const Invoice: Model<IInvoice> =
   mongoose.models.Invoice || mongoose.model<IInvoice>("Invoice", InvoiceSchema);

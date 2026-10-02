@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           barcode: r.barcode,
           requestedDate: r.createdAt || r.sampleCollectionDate,
           submittedForReviewAt: r.submittedForReviewAt,
-          submittedBy: r.submittedBy || "Vikram Malhotra, MLT",
+          submittedBy: r.submittedBy || "Lab Technician",
           verifiedDate: r.verifiedDate,
           verifiedBy: r.verifiedBy,
           summary: r.summary,
@@ -81,12 +81,12 @@ export async function GET(request: NextRequest) {
             mrn: r.patientId?.mrn || "MRN-N/A",
             age,
             gender: r.patientId?.gender || "unknown",
-            bloodGroup: r.patientId?.bloodGroup || "O+",
+            bloodGroup: r.patientId?.bloodGroup || "—",
             avatar: r.patientId?.userId?.avatar,
           },
           doctor: {
             _id: r.doctorId?._id?.toString(),
-            name: r.doctorId?.name || "Dr. Anil Kumar",
+            name: r.doctorId?.name || "Ordering Physician",
             specialty: r.doctorId?.specialty || "Internal Medicine",
           },
         };

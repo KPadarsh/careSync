@@ -12,6 +12,8 @@ import {
   CheckCircleIcon,
 } from "./PathologistIcons";
 
+import { PageHeader } from "@/components/ui/PageHeader";
+
 export function DashboardView() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -79,52 +81,42 @@ export function DashboardView() {
       : queues.verified;
 
   return (
-    <div className="flex-1 p-6 sm:p-8 lg:p-10 space-y-8 max-w-7xl mx-auto w-full">
+    <div className="space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Clinical Laboratory &amp; Pathology Directorate
-            </span>
+      <PageHeader
+        title="Diagnostic Pathology Workstation"
+        description="Certified diagnostic sign-off bench • Review pending chemistry, hematology, and endocrinology requisitions."
+        badge={{ label: "Clinical Laboratory & Pathology", tone: "info" }}
+        action={
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchDashboardData}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium shadow-xs transition-all"
+            >
+              <RefreshCwIcon className="w-3.5 h-3.5 text-slate-500" />
+              <span>Refresh Workbench</span>
+            </button>
+
+            <Link
+              href="/pathologist/reports"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#002444] text-xs font-semibold shadow-xs transition-all"
+            >
+              <ReportsIcon className="w-3.5 h-3.5 text-teal-300" />
+              <span>Open Review Queue ({metrics.awaitingReviewCount})</span>
+            </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#002444] tracking-tight">
-            Diagnostic Pathology Workstation
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Certified sign-off bench for Dr. Sunita Patil, MD • Review pending chemistry, hematology, and endocrinology requisitions.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchDashboardData}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-[#00355f] hover:border-slate-300 text-xs font-medium shadow-sm transition-all"
-          >
-            <RefreshCwIcon className="w-4 h-4 text-slate-500" />
-            <span>Refresh Workbench</span>
-          </button>
-
-          <Link
-            href="/pathologist/reports"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00355f] text-white hover:bg-[#002444] text-xs font-semibold shadow-md shadow-blue-900/20 transition-all"
-          >
-            <ReportsIcon className="w-4 h-4 text-[#94f2ef]" />
-            <span>Open Review Queue ({metrics.awaitingReviewCount})</span>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* ================= 4 OPERATIONAL METRICS ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Awaiting Review */}
         <button
           onClick={() => setActiveTab("awaiting")}
-          className={`p-5 rounded-2xl border text-left transition-all ${
+          className={`p-4 rounded-xl border text-left transition-all ${
             activeTab === "awaiting"
-              ? "bg-amber-50/60 border-amber-300 shadow-md ring-2 ring-amber-400/30"
-              : "bg-white border-slate-200/80 hover:border-amber-200 hover:shadow-sm"
+              ? "bg-amber-50/60 border-amber-300 shadow-xs ring-2 ring-amber-400/30"
+              : "bg-white border-slate-200/80 hover:border-amber-200 hover:shadow-xs"
           }`}
         >
           <div className="flex items-center justify-between">

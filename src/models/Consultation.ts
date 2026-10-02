@@ -18,25 +18,29 @@ export interface IConsultationLabOrder {
 export interface IConsultationFollowUp {
   needed: boolean;
   recommendedDate?: Date;
-  timeframe?: string; // e.g. "2 weeks", "1 month"
+  timeframe?: string;
   reason?: string;
   clinicalInstructions?: string;
 }
 
 export interface IConsultation extends Document {
+  encounterId?: Types.ObjectId;
   patientId: Types.ObjectId;
   doctorId: Types.ObjectId;
   appointmentId?: Types.ObjectId;
   queueId?: Types.ObjectId;
-  status: "draft" | "completed";
   chiefComplaint: string;
-  historyOfPresentIllness: string;
-  clinicalExamination: string;
+  clinicalFindings?: string;
+  clinicalExamination?: string; // Backwards compatibility
+  historyOfPresentIllness?: string;
   diagnosis: string;
   icdCode?: string;
-  differentialDiagnoses: string[];
+  differentialDiagnoses?: string[];
   treatmentPlan: string;
   notes?: string;
+  followUpRequired?: boolean;
+  followUpDate?: Date;
+  followUp?: IConsultationFollowUp;
   vitals?: {
     bloodPressure?: string;
     heartRate?: number;
@@ -46,10 +50,10 @@ export interface IConsultation extends Document {
     weightKg?: number;
     painScore?: number;
   };
-  medications: IConsultationMedication[];
-  labOrders: IConsultationLabOrder[];
-  followUp: IConsultationFollowUp;
-  startedAt: Date;
+  medications?: IConsultationMedication[];
+  labOrders?: IConsultationLabOrder[];
+  status: "DRAFT" | "COMPLETED" | "draft" | "completed";
+  startedAt?: Date;
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -93,6 +97,11 @@ const ConsultationFollowUpSchema = new Schema<IConsultationFollowUp>(
 
 const ConsultationSchema = new Schema<IConsultation>(
   {
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
+      index: true,
+    },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
@@ -108,25 +117,67 @@ const ConsultationSchema = new Schema<IConsultation>(
     appointmentId: {
       type: Schema.Types.ObjectId,
       ref: "Appointment",
+      index: true,
     },
     queueId: {
       type: Schema.Types.ObjectId,
       ref: "Queue",
     },
-    status: {
+    chiefComplaint: {
       type: String,
-      enum: ["draft", "completed"],
-      default: "draft",
-      index: true,
+      default: "",
+      trim: true,
     },
-    chiefComplaint: { type: String, default: "" },
-    historyOfPresentIllness: { type: String, default: "" },
-    clinicalExamination: { type: String, default: "" },
-    diagnosis: { type: String, default: "" },
-    icdCode: { type: String, default: "" },
-    differentialDiagnoses: { type: [String], default: [] },
-    treatmentPlan: { type: String, default: "" },
-    notes: { type: String, default: "" },
+    clinicalFindings: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    clinicalExamination: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    historyOfPresentIllness: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    diagnosis: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    icdCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    differentialDiagnoses: {
+      type: [String],
+      default: [],
+    },
+    treatmentPlan: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    notes: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    followUpRequired: {
+      type: Boolean,
+      default: false,
+    },
+    followUpDate: {
+      type: Date,
+    },
+    followUp: {
+      type: ConsultationFollowUpSchema,
+      default: () => ({ needed: false }),
+    },
     vitals: {
       bloodPressure: { type: String },
       heartRate: { type: Number },
@@ -136,16 +187,50 @@ const ConsultationSchema = new Schema<IConsultation>(
       weightKg: { type: Number },
       painScore: { type: Number },
     },
-    medications: { type: [ConsultationMedicationSchema], default: [] },
-    labOrders: { type: [ConsultationLabOrderSchema], default: [] },
-    followUp: { type: ConsultationFollowUpSchema, default: () => ({ needed: false }) },
-    startedAt: { type: Date, default: Date.now },
-    completedAt: { type: Date },
+    medications: {
+      type: [ConsultationMedicationSchema],
+      default: [],
+    },
+    labOrders: {
+      type: [ConsultationLabOrderSchema],
+      default: [],
+    },
+    status: {
+      type: String,
+      enum: ["DRAFT", "COMPLETED", "draft", "completed"],
+      default: "DRAFT",
+      index: true,
+    },
+    startedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    completedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+ConsultationSchema.pre<IConsultation>("save", function () {
+  if (!this.clinicalFindings && this.clinicalExamination) {
+    this.clinicalFindings = this.clinicalExamination;
+  }
+  if (!this.clinicalExamination && this.clinicalFindings) {
+    this.clinicalExamination = this.clinicalFindings;
+  }
+  if (this.followUp && this.followUp.needed) {
+    this.followUpRequired = true;
+    if (this.followUp.recommendedDate) {
+      this.followUpDate = this.followUp.recommendedDate;
+    }
+  }
+});
+
+ConsultationSchema.index({ patientId: 1, createdAt: -1 });
+ConsultationSchema.index({ doctorId: 1, createdAt: -1 });
 
 export const Consultation: Model<IConsultation> =
   mongoose.models.Consultation ||

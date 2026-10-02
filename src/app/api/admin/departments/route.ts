@@ -6,7 +6,7 @@ import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdminSession();
+    await requireAdminSession(req);
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
 
     // Fetch assigned counts for each department
     const [doctors, staff] = await Promise.all([
-      Doctor.find({ status: "active" }).select("department").lean(),
-      Staff.find({ status: "active" }).select("department").lean(),
+      Doctor.find({ status: { $in: ["active", "ACTIVE"] } }).select("department").lean(),
+      Staff.find({ status: { $in: ["active", "ACTIVE"] } }).select("department").lean(),
     ]);
 
     const enriched = departments.map((dept) => {

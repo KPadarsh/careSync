@@ -57,8 +57,10 @@ export async function PATCH(
       appointment,
     });
   } catch (error: unknown) {
-    if (error instanceof Error && error.message === "UNAUTHORIZED_PATIENT") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const err = error as any;
+    const status = err?.statusCode || (err?.message?.includes("Forbidden") ? 403 : err?.message?.includes("Unauthorized") ? 401 : 500);
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: err?.message || "Unauthorized" }, { status });
     }
     console.error("Cancel appointment error:", error);
     return NextResponse.json({ error: "Failed to cancel appointment" }, { status: 500 });

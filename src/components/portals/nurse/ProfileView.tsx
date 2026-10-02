@@ -109,18 +109,18 @@ export const ProfileView: React.FC = () => {
       {/* NURSE IDENTITY BANNER */}
       <div className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div className="w-16 h-16 rounded-full bg-[#00355f] text-white flex items-center justify-center text-xl font-bold ring-2 ring-slate-100 flex-shrink-0">
-          AM
+          {profile?.name ? profile.name.slice(0, 2).toUpperCase() : "RN"}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900">{profile?.name || "Arun Mary"}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{profile?.name || "Staff Nurse"}</h2>
             <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-bold uppercase">
               Registered Nurse
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            License: <strong className="font-mono text-slate-800">{profile?.licenseNumber || "RN-89421-CA"}</strong> •{" "}
-            {profile?.department || "Cardiology Triage"}
+            License: <strong className="font-mono text-slate-800">{profile?.licenseNumber || "RN-Pending"}</strong> •{" "}
+            {profile?.department || "Clinical Nursing"}
           </p>
           <div className="flex items-center gap-3 text-xs text-slate-600 mt-2">
             <span>Station: <strong className="text-slate-800">{profile?.station || "Triage Bay 3A"}</strong></span>

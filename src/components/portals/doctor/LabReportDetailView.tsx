@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ArrowBackIcon,
   CheckCircleIcon,
@@ -37,10 +38,10 @@ export const LabReportDetailView: React.FC<LabReportDetailViewProps> = ({ id }) 
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+      <div className="w-full max-w-5xl mx-auto flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-[#006194] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-[#565e74]">
+          <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+          <span className="text-xs font-medium text-slate-500">
             Loading verified pathology report...
           </span>
         </div>
@@ -50,12 +51,18 @@ export const LabReportDetailView: React.FC<LabReportDetailViewProps> = ({ id }) 
 
   if (!report) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
-        <div className="p-6 bg-white rounded-xl shadow-xs border border-red-200 text-center">
-          <p className="text-red-700 font-semibold">Lab report not found.</p>
+      <div className="w-full max-w-3xl mx-auto">
+        <div className="p-8 bg-white rounded-xl shadow-xs border border-rose-200 text-center flex flex-col items-center gap-3">
+          <AlertTriangleIcon className="w-8 h-8 text-rose-500" />
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Lab Report Not Found</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              The diagnostic report you requested could not be retrieved or has been archived.
+            </p>
+          </div>
           <Link
             href="/doctor/lab"
-            className="mt-4 inline-flex items-center gap-1 text-sm text-[#006194] hover:underline"
+            className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors shadow-xs"
           >
             <ArrowBackIcon className="w-4 h-4" />
             <span>Return to Laboratory Hub</span>
@@ -65,7 +72,7 @@ export const LabReportDetailView: React.FC<LabReportDetailViewProps> = ({ id }) 
     );
   }
 
-  const patient = report.patient;
+  const patient = report.patient || { name: "Patient", mrn: "MRN-N/A", age: "—", gender: "—" };
   const results = report.results && report.results.length > 0
     ? report.results
     : [
@@ -107,141 +114,140 @@ export const LabReportDetailView: React.FC<LabReportDetailViewProps> = ({ id }) 
       ];
 
   return (
-    <div className="w-full px-4 sm:px-6 py-6 max-w-5xl mx-auto flex flex-col gap-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/doctor/lab"
-            className="p-2 rounded-lg bg-white border border-[#bfc7d2]/40 text-[#565e74] hover:text-[#0b1c30] hover:bg-[#eff4ff] transition-colors"
-          >
-            <ArrowBackIcon className="w-4 h-4" />
-          </Link>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-[#00873a] uppercase tracking-wider">
-                Verified Pathology Report
-              </span>
-              <span className="text-[#bfc7d2]">•</span>
-              <span className="text-[12px] text-[#565e74]">{report.department}</span>
+    <div className="w-full max-w-5xl mx-auto flex flex-col gap-6">
+      {/* Page Header */}
+      <PageHeader
+        title={report.testName || "Pathology Report"}
+        description={`${patient.name} (${patient.mrn}) • ${report.department || "Clinical Diagnostics"}`}
+        badge={{ label: "Verified Pathology", tone: "success" }}
+        breadcrumbs={[
+          { label: "Doctor Portal", href: "/doctor/dashboard" },
+          { label: "Laboratory", href: "/doctor/lab" },
+          { label: report.testName || "Report Detail" },
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <Link
+              href="/doctor/lab"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-2xs"
+            >
+              <ArrowBackIcon className="w-4 h-4 text-slate-500" />
+              <span>Back to Lab</span>
+            </Link>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
+              <span>Pathologist Signed</span>
             </div>
-            <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight">
-              {report.testName}
-            </h1>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[12px] font-semibold border border-emerald-200">
-            <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-            <span>Pathologist Signed</span>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Patient & Order Metadata Strip */}
-      <div className="p-4 bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 grid grid-cols-2 sm:grid-cols-4 gap-4 text-[12px]">
+      <div className="p-5 bg-white rounded-xl shadow-xs border border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
         <div>
-          <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold block">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">
             Patient
           </span>
-          <span className="text-[14px] font-bold text-[#0b1c30]">
+          <span className="text-sm font-semibold text-slate-900 block">
             {patient.name}
           </span>
-          <span className="text-[#565e74] block">
+          <span className="text-slate-500 text-xs">
             {patient.mrn} • {patient.age}y {patient.gender}
           </span>
         </div>
 
         <div>
-          <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold block">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">
             Sample Collection
           </span>
-          <span className="font-semibold text-[#0b1c30]">
-            {new Date(report.sampleCollectionDate).toLocaleDateString()}
+          <span className="font-semibold text-slate-900 text-sm block">
+            {report.sampleCollectionDate ? new Date(report.sampleCollectionDate).toLocaleDateString() : "Today"}
           </span>
-          <span className="text-[#565e74] block">Fasting Phlebotomy</span>
+          <span className="text-slate-500 text-xs">Fasting Phlebotomy</span>
         </div>
 
         <div>
-          <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold block">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">
             Verified On
           </span>
-          <span className="font-semibold text-[#0b1c30]">
+          <span className="font-semibold text-slate-900 text-sm block">
             {report.verifiedDate
               ? new Date(report.verifiedDate).toLocaleDateString()
               : "Today"}
           </span>
-          <span className="text-[#00873a] font-medium block">
+          <span className="text-emerald-600 font-medium text-xs">
             Automated LIS Sync
           </span>
         </div>
 
         <div>
-          <span className="text-[10px] text-[#565e74] uppercase tracking-wider font-semibold block">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-1">
             Verified By Pathologist
           </span>
-          <span className="font-semibold text-[#0b1c30]">
-            {report.verifiedBy}
+          <span className="font-semibold text-slate-900 text-sm block">
+            {report.verifiedBy || "Dr. Pathologist"}
           </span>
-          <span className="text-[#565e74] block">
+          <span className="text-slate-500 text-xs">
             Central Diagnostics Lab
           </span>
         </div>
       </div>
 
       {/* Diagnostic Parameters Table */}
-      <div className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 overflow-hidden flex flex-col">
-        <div className="p-4 bg-[#eff4ff]/60 border-b border-[#bfc7d2]/20 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[#0b1c30]">
-            Analyte Results & Reference Intervals
-          </h3>
-          <span className="text-[12px] text-[#565e74]">
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden flex flex-col">
+        <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <LabIcon className="w-4 h-4 text-slate-500" />
+            <h3 className="text-sm font-bold text-slate-900">
+              Analyte Results & Reference Intervals
+            </h3>
+          </div>
+          <span className="text-xs text-slate-500 font-medium">
             {results.length} Parameters Measured
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-[13px]">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-white border-b border-[#bfc7d2]/20 text-[#565e74] text-[11px] uppercase tracking-wider h-9">
-                <th className="px-5 py-2 font-semibold">Parameter / Analyte</th>
-                <th className="px-4 py-2 font-semibold">Result Value</th>
-                <th className="px-4 py-2 font-semibold">Reference Range</th>
-                <th className="px-4 py-2 font-semibold">Unit</th>
-                <th className="px-5 py-2 font-semibold text-right">Clinical Flag</th>
+              <tr className="bg-white border-b border-slate-200 text-slate-500 text-[11px] uppercase tracking-wider h-10">
+                <th className="px-5 py-2.5 font-semibold">Parameter / Analyte</th>
+                <th className="px-4 py-2.5 font-semibold">Result Value</th>
+                <th className="px-4 py-2.5 font-semibold">Reference Range</th>
+                <th className="px-4 py-2.5 font-semibold">Unit</th>
+                <th className="px-5 py-2.5 font-semibold text-right">Clinical Flag</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#bfc7d2]/20">
+            <tbody className="divide-y divide-slate-100">
               {results.map((item: any, idx: number) => {
                 const isHigh = item.flag === "high";
                 const isCritical = item.flag === "critical";
 
                 return (
-                  <tr key={idx} className="hover:bg-[#eff4ff]/40 transition-colors h-12">
-                    <td className="px-5 py-2.5 font-medium text-[#0b1c30]">
+                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors h-12">
+                    <td className="px-5 py-2.5 font-medium text-slate-900">
                       {item.parameter}
                     </td>
-                    <td className="px-4 py-2.5 font-bold text-[#0b1c30]">
+                    <td className="px-4 py-2.5 font-bold text-slate-900">
                       {item.value}
                     </td>
-                    <td className="px-4 py-2.5 text-[#565e74]">
+                    <td className="px-4 py-2.5 text-slate-500 font-mono text-[11px]">
                       {item.referenceRange}
                     </td>
-                    <td className="px-4 py-2.5 text-[#565e74]">
+                    <td className="px-4 py-2.5 text-slate-500">
                       {item.unit}
                     </td>
                     <td className="px-5 py-2.5 text-right whitespace-nowrap">
                       {isCritical ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ffdad6] text-[#ba1a1a]">
+                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                           CRITICAL
                         </span>
                       ) : isHigh ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                           HIGH
                         </span>
                       ) : (
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
                           NORMAL
                         </span>
                       )}
@@ -255,20 +261,20 @@ export const LabReportDetailView: React.FC<LabReportDetailViewProps> = ({ id }) 
       </div>
 
       {/* Pathologist Summary & Impression */}
-      <div className="bg-white rounded-xl shadow-xs border border-[#bfc7d2]/30 p-5 flex flex-col gap-3">
-        <h3 className="text-sm font-bold text-[#0b1c30] uppercase tracking-wider text-[11px]">
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-5 flex flex-col gap-3">
+        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
           Pathologist Clinical Interpretation
         </h3>
-        <p className="text-[13px] text-[#0b1c30] bg-[#eff4ff]/50 p-3.5 rounded-lg border border-[#bfc7d2]/20 leading-relaxed">
+        <p className="text-xs sm:text-[13px] text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200/80 leading-relaxed">
           {report.summary ||
             "Serum Troponin-I remains below clinical detection limit (<0.040 ng/mL), ruling out acute myocardial necrosis. Lipid evaluation confirms moderate hypercholesterolemia with elevated calculated LDL (138 mg/dL). Correlation with resting 12-lead ECG recommended."}
         </p>
 
-        <div className="flex items-center justify-between pt-2 border-t border-[#bfc7d2]/20 text-[12px] text-[#565e74]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500 gap-1">
           <span>
-            Electronic sign-off committed by <strong>{report.verifiedBy}</strong>
+            Electronic sign-off committed by <strong className="text-slate-800">{report.verifiedBy || "Dr. Pathologist"}</strong>
           </span>
-          <span className="italic">
+          <span className="italic text-slate-400">
             Note: Pathology verification is restricted to authorized Pathologists.
           </span>
         </div>

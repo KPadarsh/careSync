@@ -1,24 +1,12 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
-
-export interface IDispensedItem {
-  medicineId?: Types.ObjectId;
-  medicineName: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-  quantityDispensed: number;
-  unit: string;
-  instructions: string;
-  batchNumber?: string;
-}
-
-export type DispensingStatus = "preparing" | "dispensed" | "completed" | "cancelled";
+import { IDispensedItem, DispensingStatus } from "./Dispensing";
 
 export interface IDispensingRecord extends Document {
-  dispenseId: string; // e.g. "DSP-2026-0012"
+  dispenseId: string;
   prescriptionId: Types.ObjectId;
+  encounterId?: Types.ObjectId;
   patientId: Types.ObjectId;
-  doctorId: Types.ObjectId;
+  doctorId?: Types.ObjectId;
   pharmacistId?: Types.ObjectId;
   pharmacistName: string;
   items: IDispensedItem[];
@@ -59,6 +47,11 @@ const DispensingRecordSchema = new Schema<IDispensingRecord>(
       required: true,
       index: true,
     },
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
+      index: true,
+    },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
@@ -68,7 +61,6 @@ const DispensingRecordSchema = new Schema<IDispensingRecord>(
     doctorId: {
       type: Schema.Types.ObjectId,
       ref: "Doctor",
-      required: true,
       index: true,
     },
     pharmacistId: {
@@ -80,7 +72,7 @@ const DispensingRecordSchema = new Schema<IDispensingRecord>(
       type: String,
       required: true,
       trim: true,
-      default: "Deepak Varma, RPh",
+      default: "Pharmacist",
     },
     items: {
       type: [DispensedItemSchema],
@@ -93,7 +85,17 @@ const DispensingRecordSchema = new Schema<IDispensingRecord>(
     },
     status: {
       type: String,
-      enum: ["preparing", "dispensed", "completed", "cancelled"],
+      enum: [
+        "DISPENSED",
+        "PREPARING",
+        "PARTIALLY_DISPENSED",
+        "COMPLETED",
+        "CANCELLED",
+        "preparing",
+        "dispensed",
+        "completed",
+        "cancelled",
+      ],
       default: "preparing",
       index: true,
     },

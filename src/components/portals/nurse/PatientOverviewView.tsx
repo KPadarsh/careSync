@@ -419,7 +419,7 @@ export const PatientOverviewView: React.FC<PatientOverviewProps> = ({ patientId 
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-              <span>Prepared by: <strong className="text-slate-800">{latestAssessment?.nurseName || "Arun Mary, RN"}</strong></span>
+              <span>Prepared by: <strong className="text-slate-800">{latestAssessment?.nurseName || "Staff Nurse"}</strong></span>
               <span>Status: <strong className="text-teal-700 uppercase">{latestAssessment?.status || "Draft"}</strong></span>
             </div>
           </div>

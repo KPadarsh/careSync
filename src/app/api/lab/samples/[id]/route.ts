@@ -45,7 +45,7 @@ export async function GET(
           (Date.now() - new Date((patientDoc as any).dateOfBirth).getTime()) /
             (365.25 * 24 * 60 * 60 * 1000)
         )
-      : 35;
+      : null;
 
 
     // Chain of custody milestones
@@ -53,7 +53,7 @@ export async function GET(
       {
         step: "Collection & Phlebotomy",
         time: (sample as any).collectedAt,
-        actor: (sample as any).collectedBy || "Vikram Malhotra, MLT",
+        actor: (sample as any).collectedBy || "Lab Technician",
         location: (sample as any).collectionSite || "Station 2 Phlebotomy",
         status: "completed",
         notes: "Specimen drawn and labeled at patient bedside/bay.",
@@ -139,12 +139,12 @@ export async function GET(
         mrn: patientDoc?.mrn || "MRN-N/A",
         age,
         gender: patientDoc?.gender || "unknown",
-        bloodGroup: patientDoc?.bloodGroup || "O+",
+        bloodGroup: patientDoc?.bloodGroup || "—",
         allergies: patientDoc?.allergies || [],
       },
       doctor: {
         _id: doctorDoc?._id?.toString(),
-        name: doctorDoc?.name || "Dr. Anil Kumar",
+        name: doctorDoc?.name || "Ordering Physician",
         specialty: doctorDoc?.specialty || "Internal Medicine",
       },
     };

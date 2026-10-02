@@ -17,6 +17,8 @@ import {
   ShieldIcon,
   ClockIcon,
 } from "./AdminShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 
 interface DashboardData {
   stats: {
@@ -69,117 +71,67 @@ export function DashboardView() {
     <AdminShell activeKey="dashboard">
       <div className="space-y-6">
         {/* Header with Quick Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 mb-1">
-              <ShieldIcon className="w-3.5 h-3.5" />
-              Administrative Console
+        <PageHeader
+          title="Hospital Operations & System Infrastructure"
+          description="Manage facility departments, personnel credentials, shift rosters, and security policies."
+          badge={{ label: "Administrative Console", tone: "info" }}
+          action={
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={fetchDashboard}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-xs"
+              >
+                <RefreshIcon className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                <span>Refresh</span>
+              </button>
+              <Link
+                href="/admin/staff/new"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition shadow-xs"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                <span>Add Staff</span>
+              </Link>
+              <Link
+                href="/admin/doctors/new"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition shadow-xs"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                <span>Add Doctor</span>
+              </Link>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Hospital Operations & System Infrastructure
-            </h1>
-            <p className="text-sm text-slate-500">
-              Manage facility departments, personnel credentials, shift rosters, and security policies.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={fetchDashboard}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-sm"
-            >
-              <RefreshIcon className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            <Link
-              href="/admin/staff/new"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Staff
-            </Link>
-            <Link
-              href="/admin/doctors/new"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition shadow-sm"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Doctor
-            </Link>
-          </div>
-        </div>
+          }
+        />
 
         {/* Operational Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Total Staff
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <StaffIcon className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">
-              {data?.stats.totalStaff ?? 0}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-emerald-600 font-semibold">Active Profiles</span>
-              <span>across 6 clinical roles</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Doctors
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <DoctorsIcon className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">
-              {data?.stats.totalDoctors ?? 0}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-indigo-600 font-semibold">Physicians</span>
-              <span>with active clinical suites</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Departments
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <DepartmentsIcon className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">
-              {data?.stats.totalDepartments ?? 0}
-            </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-emerald-600 font-semibold">100% Operational</span>
-              <span>in clinic building</span>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Pending Admin Tasks
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                <AlertTriangleIcon className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">
-              {data?.stats.pendingAdminTasks ?? 3}
-            </div>
-            <div className="text-xs text-amber-600 font-medium mt-1">
-              Compliance & roster reviews
-            </div>
-          </div>
+          <StatCard
+            label="Total Staff"
+            value={data?.stats.totalStaff ?? 0}
+            subtext="across 6 clinical roles"
+            icon={<StaffIcon className="w-5 h-5" />}
+            tone="info"
+          />
+          <StatCard
+            label="Doctors"
+            value={data?.stats.totalDoctors ?? 0}
+            subtext="with active clinical suites"
+            icon={<DoctorsIcon className="w-5 h-5" />}
+            tone="primary"
+          />
+          <StatCard
+            label="Departments"
+            value={data?.stats.totalDepartments ?? 0}
+            subtext="100% operational in facility"
+            icon={<DepartmentsIcon className="w-5 h-5" />}
+            tone="success"
+          />
+          <StatCard
+            label="Pending Admin Tasks"
+            value={data?.stats.pendingAdminTasks ?? 0}
+            subtext="Compliance & roster reviews"
+            icon={<AlertTriangleIcon className="w-5 h-5" />}
+            tone={(data?.stats.pendingAdminTasks ?? 0) > 0 ? "warning" : "default"}
+          />
         </div>
 
         {/* Quick Action Bar */}

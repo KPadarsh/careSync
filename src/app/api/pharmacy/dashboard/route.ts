@@ -41,26 +41,55 @@ export async function GET(req: NextRequest) {
       status: { $in: ["preparing", "dispensed"] },
     });
 
+    const getPatientName = (patient: any) => {
+      if (!patient) return "Patient";
+      if (patient.userId && typeof patient.userId === "object" && patient.userId.name) {
+        return patient.userId.name;
+      }
+      if (patient.firstName || patient.lastName) {
+        return `${patient.firstName || ""} ${patient.lastName || ""}`.trim();
+      }
+      return patient.name || "Patient";
+    };
+
     // Fetch lists
     // A. Pending prescriptions (created by doctors)
-    const pendingPrescriptions = await Prescription.find({
+    const rawPendingPrescriptions = await Prescription.find({
       status: "pending",
     })
-      .populate("patientId", "name mrn gender dateOfBirth bloodGroup")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender dateOfBirth bloodGroup userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department")
       .sort({ createdAt: -1 })
       .limit(6)
       .lean();
 
+    const pendingPrescriptions = rawPendingPrescriptions.map((rx: any) => {
+      if (rx.patientId) rx.patientId.name = getPatientName(rx.patientId);
+      return rx;
+    });
+
     // B. Ready for dispensing prescriptions
-    const readyPrescriptions = await Prescription.find({
+    const rawReadyPrescriptions = await Prescription.find({
       status: { $in: ["ready", "reviewed"] },
     })
-      .populate("patientId", "name mrn gender dateOfBirth bloodGroup")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender dateOfBirth bloodGroup userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty department")
       .sort({ updatedAt: -1 })
       .limit(6)
       .lean();
+
+    const readyPrescriptions = rawReadyPrescriptions.map((rx: any) => {
+      if (rx.patientId) rx.patientId.name = getPatientName(rx.patientId);
+      return rx;
+    });
 
     // C. Low-stock medicines
     const lowStockMedicines = await Medicine.find({
@@ -71,46 +100,63 @@ export async function GET(req: NextRequest) {
       .lean();
 
     // D. Today's dispensing
-    const todayDispensing = await DispensingRecord.find({
+    const rawTodayDispensing = await DispensingRecord.find({
       dispensedDate: { $gte: startOfToday },
     })
-      .populate("patientId", "name mrn gender")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("doctorId", "name specialty")
       .populate("prescriptionId")
       .sort({ dispensedDate: -1 })
       .limit(6)
       .lean();
 
+    const todayDispensing = rawTodayDispensing.map((d: any) => {
+      if (d.patientId) d.patientId.name = getPatientName(d.patientId);
+      return d;
+    });
+
     // E. Recent Activity timeline
-    const recentDispensing = await DispensingRecord.find({})
-      .populate("patientId", "name")
+    const rawRecentDispensing = await DispensingRecord.find({})
+      .populate({
+        path: "patientId",
+        select: "firstName lastName userId",
+        populate: { path: "userId", select: "name" },
+      })
       .sort({ updatedAt: -1 })
       .limit(5)
       .lean();
 
-    const recentClarifications = await Prescription.find({
+    const rawRecentClarifications = await Prescription.find({
       status: "clarification_requested",
     })
-      .populate("patientId", "name")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName userId",
+        populate: { path: "userId", select: "name" },
+      })
       .populate("doctorId", "name")
       .sort({ updatedAt: -1 })
       .limit(3)
       .lean();
 
     const recentActivity = [
-      ...recentDispensing.map((d: any) => ({
+      ...rawRecentDispensing.map((d: any) => ({
         id: d._id.toString(),
         type: "dispense",
         title: `Dispensed: ${d.dispenseId}`,
-        description: `Dispensed to patient ${(d.patientId as any)?.name || "Patient"} by ${d.pharmacistName}`,
+        description: `Dispensed to patient ${getPatientName(d.patientId)} by ${d.pharmacistName}`,
         time: d.dispensedDate || d.updatedAt,
         status: d.status,
       })),
-      ...recentClarifications.map((c: any) => ({
+      ...rawRecentClarifications.map((c: any) => ({
         id: c._id.toString(),
         type: "clarification",
         title: `Clarification Requested`,
-        description: `Contacted Dr. ${(c.doctorId as any)?.name || "Doctor"} for ${(c.patientId as any)?.name || "Patient"}: ${c.clarificationReason || "Dose verification"}`,
+        description: `Contacted Dr. ${(c.doctorId as any)?.name || "Doctor"} for ${getPatientName(c.patientId)}: ${c.clarificationReason || "Dose verification"}`,
         time: c.updatedAt,
         status: "clarification_requested",
       })),

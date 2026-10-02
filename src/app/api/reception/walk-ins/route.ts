@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { connectToDatabase } from "@/lib/db";
 import { requireReceptionSession, hashPassword } from "@/lib/auth";
-import { Queue, Appointment, Patient, Doctor, User } from "@/models";
+import { Queue, Appointment, Patient, Doctor, User, Notification } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 import { Types } from "mongoose";
 import { ROLES } from "@/lib/constants";
 
@@ -126,11 +128,49 @@ export async function POST(req: NextRequest) {
     });
     const estimatedWaitMinutes = (waitingBefore + 1) * 15;
 
+    // Notify nurse triage station via NotificationService
+    try {
+      await NotificationService.notifyRole("NURSE", {
+        title: "New Patient Ready",
+        message: "A checked-in patient is ready for nursing assessment.",
+        type: "queue",
+        link: "/nurse/queue",
+        relatedResource: {
+          resourceType: "queue",
+          resourceId: queue._id.toString(),
+        },
+      });
+    } catch (notifErr) {
+      console.error("Failed to notify nurse of walk-in:", notifErr);
+    }
+
+    // Record audit event
+    await logAuditEvent({
+      actor: {
+        userId: receptionist._id,
+        name: receptionist.name,
+        email: receptionist.email,
+        role: receptionist.role,
+      },
+      action: "WALK_IN_REGISTERED_AND_QUEUED",
+      resource: `Ticket ${queue.ticketNumber} for Patient ${patientRecord.mrn}`,
+      resourceType: "queue",
+      metadata: {
+        patientId: patientRecord._id,
+        doctorId: doctor._id,
+        queueId: queue._id,
+        ticketNumber: queue.ticketNumber,
+      },
+    });
+
     return NextResponse.json({
       success: true,
       message: "Walk-in patient registered and queued successfully",
       ticket: {
+        _id: queue._id.toString(),
+        appointmentId: appointment._id.toString(),
         ticketNumber: queue.ticketNumber,
+        status: queue.status,
         patientName:
           (patientRecord.userId as unknown as { name?: string })?.name || "Patient",
         mrn: patientRecord.mrn,

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  BillingShell,
   AlertCircleIcon,
   SearchIcon,
   CreditCardIcon,
@@ -100,8 +99,7 @@ export function OutstandingView() {
   });
 
   return (
-    <BillingShell activeKey="outstanding">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -351,6 +349,5 @@ export function OutstandingView() {
           )}
         </div>
       </div>
-    </BillingShell>
   );
 }

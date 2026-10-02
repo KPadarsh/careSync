@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icons } from "./ReceptionIcons";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 
 interface DashboardData {
   stats: {
@@ -164,88 +166,60 @@ export function DashboardView() {
 
   return (
     <div className="space-y-6">
-      {/* PAGE TITLE BAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#00355f]">
-            Reception Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time outpatient operations • Station 01 Main Lobby
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadDashboard}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-2xs transition-colors"
-          >
-            <Icons.Refresh className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
+      {/* PAGE HEADER */}
+      <PageHeader
+        title="Reception Dashboard"
+        description="Real-time outpatient operations • Station 01 Main Lobby"
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadDashboard}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-xs transition-colors"
+            >
+              <Icons.Refresh className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
+            </button>
+            <Link
+              href="/reception/appointments/new"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors"
+            >
+              <Icons.Plus className="w-3.5 h-3.5" />
+              <span>Book Appointment</span>
+            </Link>
+          </div>
+        }
+      />
 
       {/* 4 OPERATIONAL STAT METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* CARD 1: TODAY'S APPOINTMENTS */}
-        <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-2xs hover:border-slate-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Today&apos;s Bookings</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
-              <Icons.Appointments className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{stats.totalAppointments}</span>
-            <span className="text-[11px] font-medium text-emerald-600">Scheduled</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Confirmed clinic visits today</p>
-        </div>
-
-        {/* CARD 2: CHECKED-IN PATIENTS */}
-        <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-2xs hover:border-slate-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Checked-in</span>
-            <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
-              <Icons.UserCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{stats.checkedIn}</span>
-            <span className="text-[11px] font-medium text-teal-700">In Facility</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Arrived &amp; verified at reception</p>
-        </div>
-
-        {/* CARD 3: PATIENTS WAITING */}
-        <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-2xs hover:border-slate-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Waiting in Queue</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <Icons.Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{stats.waiting}</span>
-            <span className="text-[11px] font-medium text-amber-700">Avg ~15m</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">{stats.inConsultation} currently with doctors</p>
-        </div>
-
-        {/* CARD 4: ATTENTION ITEMS */}
-        <div className="p-4 bg-white border border-slate-200/80 rounded-xl shadow-2xs hover:border-slate-300 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Attention / Urgent</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center">
-              <Icons.AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">{stats.urgentCases}</span>
-            <span className="text-[11px] font-medium text-rose-600">Priority cases</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1">Requires immediate desk attention</p>
-        </div>
+        <StatCard
+          label="Today's Bookings"
+          value={stats.totalAppointments}
+          subtext="Confirmed clinic visits today"
+          icon={<Icons.Appointments className="w-5 h-5" />}
+          tone="info"
+        />
+        <StatCard
+          label="Checked-in"
+          value={stats.checkedIn}
+          subtext="Arrived & verified at desk"
+          icon={<Icons.UserCheck className="w-5 h-5" />}
+          tone="primary"
+        />
+        <StatCard
+          label="Waiting in Queue"
+          value={stats.waiting}
+          subtext={`${stats.inConsultation} in consultation`}
+          icon={<Icons.Clock className="w-5 h-5" />}
+          tone="warning"
+        />
+        <StatCard
+          label="Attention / Urgent"
+          value={stats.urgentCases}
+          subtext="Immediate desk attention"
+          icon={<Icons.AlertTriangle className="w-5 h-5" />}
+          tone={stats.urgentCases > 0 ? "danger" : "default"}
+        />
       </div>
 
       {/* QUICK ACTIONS STRIP */}

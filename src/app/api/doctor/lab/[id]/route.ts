@@ -47,7 +47,7 @@ export async function GET(
           (Date.now() - new Date(patient.dateOfBirth).getTime()) /
             (365.25 * 24 * 60 * 60 * 1000)
         )
-      : 32;
+      : null;
 
     return NextResponse.json({
       report: {
@@ -58,7 +58,7 @@ export async function GET(
         verifiedDate: report.verifiedDate,
         status: report.status,
         summary: report.summary,
-        verifiedBy: report.verifiedBy || "Dr. Sunita Patil, MD Pathology",
+        verifiedBy: report.verifiedBy || "Consultant Pathologist",
         results: report.results || [],
         fileUrl: report.fileUrl,
         patient: {
@@ -67,7 +67,7 @@ export async function GET(
           mrn: patient?.mrn || "MRN-N/A",
           age,
           gender: patient?.gender || "male",
-          bloodGroup: patient?.bloodGroup || "O+",
+          bloodGroup: patient?.bloodGroup || "—",
           allergies: patient?.allergies || [],
           avatar: patient?.userId?.avatar,
         },

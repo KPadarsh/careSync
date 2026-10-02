@@ -4,7 +4,7 @@ import { LabShell, CompletedView } from "@/components/portals/lab";
 export const metadata: Metadata = {
   title: "Completed & Verified Reports Archive | CareSync",
   description:
-    "Archive of lab reports submitted for review and verified by Board Certified Pathologist Dr. Sunita Patil, MD.",
+    "Archive of lab reports submitted for review and verified by Board Certified Pathologists.",
 };
 
 export default function LabCompletedPage() {

@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     const validRoles = Object.values(ROLES);
-    if (!validRoles.includes(role as Role)) {
+    if (!(validRoles as string[]).includes(role)) {
       return NextResponse.json(
         { success: false, error: `Invalid role specified. Valid roles are: ${validRoles.join(", ")}` },
         { status: 400 }

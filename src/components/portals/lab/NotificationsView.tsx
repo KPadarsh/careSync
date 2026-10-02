@@ -11,60 +11,24 @@ import {
   RequestsIcon,
 } from "./LabIcons";
 
+import { useNotifications } from "@/hooks/useNotifications";
+
 export const NotificationsView: React.FC = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    refresh,
+  } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchNotifications = async () => {
-    try {
-      setRefreshing(true);
-      const res = await fetch("/api/lab/notifications");
-      if (!res.ok) {
-        throw new Error("Failed to load notifications");
-      }
-      const data = await res.json();
-      setNotifications(data.notifications || []);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || "Failed to load notifications");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await fetch("/api/lab/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
-      );
-    } catch (err) {
-      console.error("Mark notification as read error:", err);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await fetch("/api/lab/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markAll: true }),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch (err) {
-      console.error("Mark all notifications read error:", err);
-    }
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
   };
 
   return (
@@ -88,7 +52,7 @@ export const NotificationsView: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleMarkAllAsRead}
+            onClick={markAllAsRead}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
           >
             <CheckIcon size={14} />
@@ -128,7 +92,7 @@ export const NotificationsView: React.FC = () => {
           <div className="divide-y divide-slate-100">
             {notifications.map((n) => (
               <div
-                key={n._id}
+                key={n.id || n._id}
                 className={`p-4 sm:p-5 flex items-start justify-between gap-4 transition-colors ${
                   !n.isRead ? "bg-blue-50/40" : "hover:bg-slate-50/60"
                 }`}
@@ -173,7 +137,7 @@ export const NotificationsView: React.FC = () => {
                 {!n.isRead && (
                   <button
                     type="button"
-                    onClick={() => handleMarkAsRead(n._id)}
+                    onClick={() => markAsRead((n.id || n._id || "") as string)}
                     className="text-xs text-slate-400 hover:text-slate-700 font-semibold px-2 py-1 rounded hover:bg-white"
                   >
                     Dismiss

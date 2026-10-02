@@ -137,10 +137,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED_PATHOLOGIST") {
+    if (error.statusCode === 401 || error.statusCode === 403 || error.message?.includes("access required") || error.message?.includes("Authentication required") || error.message === "UNAUTHORIZED_PATHOLOGIST") {
       return NextResponse.json(
-        { error: "Unauthorized: Pathologist access required." },
-        { status: 403 }
+        { error: error.message || "Unauthorized: Pathologist access required." },
+        { status: error.statusCode || 403 }
       );
     }
     console.error("Pathologist dashboard error:", error);

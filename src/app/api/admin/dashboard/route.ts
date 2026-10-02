@@ -24,9 +24,9 @@ export async function GET() {
       adminNotifications,
       recentAuditLogs,
     ] = await Promise.all([
-      Staff.countDocuments({ status: "active" }),
-      Doctor.countDocuments({ status: "active" }),
-      Department.countDocuments({ status: "active" }),
+      Staff.countDocuments({ status: { $in: ["active", "ACTIVE"] } }),
+      Doctor.countDocuments({ status: { $in: ["active", "ACTIVE"] } }),
+      Department.countDocuments({ status: { $in: ["active", "ACTIVE"] } }),
       User.countDocuments(),
       Staff.find().sort({ createdAt: -1 }).limit(10).lean(),
       Doctor.find().sort({ createdAt: -1 }).limit(10).lean(),
@@ -36,11 +36,11 @@ export async function GET() {
       AuditLog.find().sort({ createdAt: -1 }).limit(6).lean(),
     ]);
 
-    // Staff breakdown by role
+    // Staff breakdown by role (consistent with active staff)
     const staffRoleCounts: Record<string, number> = {};
-    const allStaff = await Staff.find().select("role status").lean();
+    const allStaff = await Staff.find({ status: { $in: ["active", "ACTIVE"] } }).select("role status").lean();
     allStaff.forEach((s) => {
-      const r = s.role || "other";
+      const r = (s.role || "other").toLowerCase();
       staffRoleCounts[r] = (staffRoleCounts[r] || 0) + 1;
     });
 
@@ -50,7 +50,7 @@ export async function GET() {
 
     // Today's Staff & Doctor Duty Schedule
     const todaySchedules = schedulesList.filter(
-      (s) => s.dayOfWeek === currentDay || s.status === "active"
+      (s) => s.dayOfWeek === currentDay || s.status?.toLowerCase() === "active"
     );
 
     // Administrative Pending Tasks (system compliance, unassigned shifts, etc.)

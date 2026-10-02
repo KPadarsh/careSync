@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePathologistSession } from "@/lib/auth";
 import { LabReport, LabSample, Patient, Doctor, Notification, User } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 
 export async function GET(
   req: NextRequest,
@@ -204,19 +205,18 @@ export async function POST(
       if (body.notes) report.pathologistNotes = body.notes.trim();
       await report.save();
 
-      // Dispatch alert to Lab Technician
+      // Dispatch alert to Lab Technician via NotificationService
       try {
-        const labTechUser = await User.findOne({ role: "lab_technician" });
-        if (labTechUser) {
-          await Notification.create({
-            recipientId: labTechUser._id,
-            type: "lab_report",
-            title: `Correction Requested: ${report.testName}`,
-            message: `Pathologist ${session.user.name} flagged report for correction: "${reason}". Specimen redraw or wet-bench rerun required.`,
-            isRead: false,
-            link: `/lab/requests/${report._id}`,
-          });
-        }
+        await NotificationService.notifyRole("LAB_TECHNICIAN", {
+          title: `Correction Requested: ${report.testName}`,
+          message: `Pathologist ${session.user.name} flagged report for correction: "${reason}". Specimen redraw or wet-bench rerun required.`,
+          type: "lab_report",
+          link: `/lab/requests/${report._id}`,
+          relatedResource: {
+            resourceType: "lab_report",
+            resourceId: report._id.toString(),
+          },
+        });
       } catch (e) {
         console.error("Failed to notify lab technician of correction:", e);
       }
@@ -262,34 +262,40 @@ export async function POST(
 
       await report.save();
 
-      // Notify ordering doctor
+      // Notify ordering doctor via NotificationService
       try {
         const doctorDoc = await Doctor.findById(report.doctorId);
         if (doctorDoc?.userId) {
-          await Notification.create({
-            recipientId: doctorDoc.userId,
-            type: "lab_report",
+          await NotificationService.createNotification({
+            recipientUserId: doctorDoc.userId,
             title: `Certified Lab Results: ${report.testName}`,
             message: `Diagnostic report for your patient has been certified and finalized by Pathologist ${session.user.name}.`,
-            isRead: false,
+            type: "lab_report",
             link: `/doctor/lab/${report._id}`,
+            relatedResource: {
+              resourceType: "lab_report",
+              resourceId: report._id.toString(),
+            },
           });
         }
       } catch (e) {
         console.error("Failed to notify ordering doctor:", e);
       }
 
-      // Notify patient
+      // Notify patient via NotificationService
       try {
         const patientDoc = await Patient.findById(report.patientId);
         if (patientDoc?.userId) {
-          await Notification.create({
-            recipientId: patientDoc.userId,
-            type: "lab_report",
+          await NotificationService.createNotification({
+            recipientUserId: patientDoc.userId,
             title: `Diagnostic Report Available: ${report.testName}`,
             message: `Your laboratory results have been clinically certified by Pathology and are now available for review.`,
-            isRead: false,
+            type: "lab_report",
             link: `/patient/lab-reports`,
+            relatedResource: {
+              resourceType: "lab_report",
+              resourceId: report._id.toString(),
+            },
           });
         }
       } catch (e) {

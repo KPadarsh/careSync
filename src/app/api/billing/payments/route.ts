@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireBillingSession } from "@/lib/auth";
-import { Payment, Invoice, Patient, Notification } from "@/models";
+import { Payment, Invoice, Patient, Notification, User } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +21,21 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
+      const matchingUsers = await User.find({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
       const matchingPatients = await Patient.find({
-        name: { $regex: search, $options: "i" },
+        $or: [
+          { mrn: { $regex: search, $options: "i" } },
+          { firstName: { $regex: search, $options: "i" } },
+          { lastName: { $regex: search, $options: "i" } },
+          { userId: { $in: userIds } },
+        ],
       }).select("_id");
       const patientIds = matchingPatients.map((p) => p._id);
 
@@ -39,15 +54,36 @@ export async function GET(req: NextRequest) {
     }
 
     const payments = await Payment.find(query)
-      .populate("patientId", "name mrn gender phone")
+      .populate({
+        path: "patientId",
+        select: "firstName lastName mrn gender phone userId",
+        populate: { path: "userId", select: "name email phone" },
+      })
       .populate("invoiceId", "invoiceNumber totalAmount balanceAmount status")
       .sort({ paymentDate: -1, createdAt: -1 })
       .lean();
 
+    const formatted = payments.map((pmt: any) => {
+      const p = pmt.patientId;
+      const patientName =
+        p?.userId?.name ||
+        `${p?.firstName || ""} ${p?.lastName || ""}`.trim() ||
+        "Patient";
+      return {
+        ...pmt,
+        patientId: p
+          ? {
+              ...p,
+              name: patientName,
+            }
+          : null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      payments,
-      total: payments.length,
+      payments: formatted,
+      total: formatted.length,
     });
   } catch (error: any) {
     console.error("Billing payments GET error:", error);
@@ -139,7 +175,7 @@ export async function POST(req: NextRequest) {
       paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
       status: "completed",
       receivedBy: session.user._id,
-      receivedByName: session.user.name || "Meera Nair, Billing Specialist",
+      receivedByName: session.user.name || "Billing Specialist",
       notes: notes ? String(notes).trim() : undefined,
     });
 
@@ -159,14 +195,61 @@ export async function POST(req: NextRequest) {
 
     await invoice.save();
 
-    // Create confirmation notification
-    await Notification.create({
-      recipientId: session.user._id,
-      title: `Payment Collected: $${payAmount.toFixed(2)}`,
-      message: `Transaction ${transactionNumber} processed for invoice ${invoice.invoiceNumber}. New balance: $${invoice.balanceAmount.toFixed(2)}.`,
-      type: "system",
-      link: `/billing/invoices/${invoice._id}`,
-      isRead: false,
+    // Create confirmation notification for billing specialist via NotificationService
+    try {
+      await NotificationService.createNotification({
+        recipientUserId: session.user._id,
+        title: `Payment Collected: $${payAmount.toFixed(2)}`,
+        message: `Transaction ${transactionNumber} processed for invoice ${invoice.invoiceNumber}. New balance: $${invoice.balanceAmount.toFixed(2)}.`,
+        type: "system",
+        link: `/billing/invoices/${invoice._id}`,
+        relatedResource: {
+          resourceType: "payment",
+          resourceId: payment._id.toString(),
+        },
+      });
+    } catch (e) {
+      console.error("Failed to notify billing specialist of payment:", e);
+    }
+
+    // Notify patient of payment receipt via NotificationService
+    try {
+      const patientDoc = await Patient.findById(invoice.patientId);
+      if (patientDoc?.userId) {
+        await NotificationService.createNotification({
+          recipientUserId: patientDoc.userId,
+          title: `Payment Received ($${payAmount.toFixed(2)})`,
+          message: `Your payment of $${payAmount.toFixed(2)} for invoice ${invoice.invoiceNumber} has been received. Remaining balance: $${invoice.balanceAmount.toFixed(2)}.`,
+          type: "billing",
+          link: "/patient/billing",
+          relatedResource: {
+            resourceType: "payment",
+            resourceId: payment._id.toString(),
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to notify patient of payment:", notifErr);
+    }
+
+    // Record audit event
+    await logAuditEvent({
+      actor: {
+        userId: session.user._id,
+        name: session.user.name,
+        email: session.user.email,
+        role: session.user.role,
+      },
+      action: "PAYMENT_COLLECTED",
+      resource: `Payment ${transactionNumber} for Invoice ${invoice.invoiceNumber}`,
+      resourceType: "payment",
+      metadata: {
+        paymentId: payment._id,
+        invoiceId: invoice._id,
+        patientId: invoice.patientId,
+        amount: payAmount,
+        balanceRemaining: invoice.balanceAmount,
+      },
     });
 
     return NextResponse.json({

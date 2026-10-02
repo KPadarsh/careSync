@@ -37,7 +37,7 @@ export async function GET() {
       .sort({ priority: -1, checkedInTime: 1 });
 
     // Active doctors
-    const doctors = await Doctor.find({ status: "active" }).select(
+    const doctors = await Doctor.find({ status: { $in: ["active", "ACTIVE"] } }).select(
       "name specialty department roomNumber avatar status workingHours"
     );
 

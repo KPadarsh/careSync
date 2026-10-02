@@ -78,13 +78,13 @@ export async function GET(request: NextRequest) {
             mrn: t.patientId?.mrn || "MRN-N/A",
             age,
             gender: t.patientId?.gender || "unknown",
-            bloodGroup: t.patientId?.bloodGroup || "O+",
+            bloodGroup: t.patientId?.bloodGroup || "—",
             allergies: t.patientId?.allergies || [],
             avatar: t.patientId?.userId?.avatar,
           },
           doctor: {
             _id: t.doctorId?._id?.toString(),
-            name: t.doctorId?.name || "Dr. Anil Kumar",
+            name: t.doctorId?.name || "Ordering Physician",
             specialty: t.doctorId?.specialty || "Internal Medicine",
           },
         };

@@ -217,9 +217,10 @@ export async function GET(
     });
   } catch (error: any) {
     console.error("Doctor patient details API error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to load patient clinical profile" },
-      { status: 500 }
+      { status }
     );
   }
 }

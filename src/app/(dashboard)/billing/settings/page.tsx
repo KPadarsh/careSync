@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { SettingsView } from "@/components/portals/billing";
+import { BillingShell, SettingsView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Billing Settings | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  return <SettingsView />;
+  return (
+    <BillingShell>
+      <SettingsView />
+    </BillingShell>
+  );
 }

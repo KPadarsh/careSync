@@ -15,8 +15,8 @@ const defaultStats: PatientStatItem[] = [
   {
     id: "upcoming-appts",
     label: "Upcoming Appts",
-    value: 2,
-    badge: 2,
+    value: 0,
+    badge: 0,
     type: "info",
     href: "/patient/appointments",
     icon: (
@@ -28,8 +28,8 @@ const defaultStats: PatientStatItem[] = [
   {
     id: "active-rx",
     label: "Active Rx",
-    value: 1,
-    badge: 1,
+    value: 0,
+    badge: 0,
     type: "success",
     href: "/patient/prescriptions",
     icon: (
@@ -41,8 +41,8 @@ const defaultStats: PatientStatItem[] = [
   {
     id: "pending-labs",
     label: "Pending Labs",
-    value: 3,
-    badge: 3,
+    value: 0,
+    badge: 0,
     type: "warning",
     href: "/patient/lab-reports",
     icon: (
@@ -54,7 +54,7 @@ const defaultStats: PatientStatItem[] = [
   {
     id: "outstanding-bills",
     label: "Outstanding Bills",
-    value: "$1,250",
+    value: "$0",
     type: "error",
     href: "/patient/billing",
     icon: (
@@ -84,11 +84,11 @@ export function PatientStats({ stats = defaultStats }: { stats?: PatientStatItem
             className="group block"
           >
             <div
-              className="bg-white rounded-lg p-4 border border-[#e2e8f0] shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] hover:shadow-md transition-shadow cursor-pointer h-full"
+              className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer h-full flex flex-col justify-between"
             >
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-3">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${style.bg}`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${style.bg}`}
                 >
                   {item.icon}
                 </div>
@@ -100,12 +100,14 @@ export function PatientStats({ stats = defaultStats }: { stats?: PatientStatItem
                   </span>
                 )}
               </div>
-              <h3 className="text-xl font-bold text-[#0b1c30] leading-none mb-1 group-hover:text-[#131b2e] transition-colors">
-                {item.value}
-              </h3>
-              <p className="text-xs font-medium text-[#45464d]">
-                {item.label}
-              </p>
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900 leading-none mb-1 group-hover:text-teal-900 transition-colors">
+                  {item.value}
+                </h3>
+                <p className="text-xs font-medium text-slate-500">
+                  {item.label}
+                </p>
+              </div>
             </div>
           </Link>
         );

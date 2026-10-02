@@ -1,10 +1,11 @@
 import crypto from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { connectToDatabase } from "@/lib/db";
 import { User, IUser } from "@/models/User";
 import { Patient, IPatient } from "@/models/Patient";
 import { Doctor, IDoctor } from "@/models/Doctor";
-import { ROLES, Role } from "@/lib/constants";
+import { Role } from "@/lib/constants";
+import { AuthService } from "@/services/auth.service";
 
 const SESSION_COOKIE_NAME = "caresync_session";
 const SESSION_SECRET =
@@ -14,9 +15,22 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 export interface SessionPayload {
   userId: string;
   email: string;
-  role: Role;
+  role: string;
   patientId?: string;
   exp: number;
+}
+
+export interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  profileType?: string;
+  profileId?: string;
+  avatar?: string;
+  phone?: string;
+  lastLoginAt?: Date;
 }
 
 export interface AuthSession {
@@ -27,7 +41,7 @@ export interface AuthSession {
 }
 
 /**
- * Hash password with scrypt and salt
+ * Hash password with scrypt and a cryptographic salt
  */
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -38,7 +52,7 @@ export function hashPassword(password: string): string {
 }
 
 /**
- * Verify password against salt:derivedKey hash
+ * Securely verify password against salt:derivedKey hash using timing-safe comparison
  */
 export function verifyPassword(password: string, combinedHash: string): boolean {
   try {
@@ -65,7 +79,7 @@ export function signSession(payload: SessionPayload): string {
 }
 
 /**
- * Verify and decode session token
+ * Verify and decode session token with cryptographic signature check & expiration
  */
 export function verifySession(token: string): SessionPayload | null {
   try {
@@ -101,7 +115,7 @@ export function verifySession(token: string): SessionPayload | null {
 }
 
 /**
- * Write session cookie to response
+ * Write secure HttpOnly session cookie to response
  */
 export async function setSessionCookie(payload: Omit<SessionPayload, "exp">): Promise<void> {
   const cookieStore = await cookies();
@@ -121,64 +135,137 @@ export async function setSessionCookie(payload: Omit<SessionPayload, "exp">): Pr
 }
 
 /**
- * Clear session cookie
+ * Clear session cookie across client and server
  */
 export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  await AuthService.logout();
 }
 
 /**
- * Retrieve authenticated session.
- * Derive patient identity strictly from DB based on authenticated User ID.
- * Never trust patientId from browser/URL.
+ * Extract raw session token from cookie store or authorization header
  */
-export async function getSession(): Promise<AuthSession | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (!sessionCookie?.value) {
-    // If no cookie is set, ensure default database seed and provide default patient session
-    const { seedCareSyncDatabase } = await import("@/lib/seed");
-    await seedCareSyncDatabase();
-    const defaultUser = await User.findOne({ email: "rahul@patient.caresync.com" });
-    if (defaultUser) {
-      const patient = await Patient.findOne({ userId: defaultUser._id });
-      if (patient) {
-        try {
-          await setSessionCookie({
-            userId: defaultUser._id.toString(),
-            email: defaultUser.email,
-            role: defaultUser.role,
-            patientId: patient._id.toString(),
-          });
-        } catch {
-          // ignore cookie set failure if called during read-only Server Component phase
-        }
-        return {
-          user: defaultUser,
-          patient,
-          role: defaultUser.role,
-          patientId: patient._id.toString(),
-        };
-      }
+async function getRawSessionToken(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+    if (sessionCookie?.value) {
+      return sessionCookie.value;
     }
+  } catch {
+    // cookies() unavailable in non-request contexts
+  }
+
+  try {
+    const headerStore = await headers();
+    const authHeader = headerStore.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      return authHeader.substring(7).trim();
+    }
+  } catch {
+    // headers() unavailable
+  }
+
+  return null;
+}
+
+/**
+ * Reusable server-side helper: reads session, validates signature,
+ * resolves current User from database, ensures account is ACTIVE,
+ * and returns safe user information without passwordHash.
+ */
+export async function getCurrentUser(req?: any): Promise<SafeUser | null> {
+  try {
+    // 1. Check server-side Session in MongoDB
+    const serverUser = await AuthService.getCurrentUser(req);
+    if (serverUser) {
+      return serverUser;
+    }
+
+    // 2. Fallback check for signed token
+    await connectToDatabase();
+    const token = await getRawSessionToken();
+    if (!token) return null;
+
+    const payload = verifySession(token);
+    if (!payload || !payload.userId) return null;
+
+    const user = await User.findById(payload.userId);
+    if (!user) return null;
+
+    const statusNorm = (user.status || "").toUpperCase();
+    if (statusNorm !== "ACTIVE") {
+      return null;
+    }
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      profileType: user.profileType,
+      profileId: user.profileId?.toString(),
+      avatar: user.avatar,
+      phone: user.phone,
+      lastLoginAt: user.lastLoginAt,
+    };
+  } catch (error) {
+    console.error("getCurrentUser error:", error);
+    return null;
+  }
+}
+
+/**
+ * Strictly require an active authenticated user. Throws UNAUTHORIZED if not authenticated or not active.
+ */
+export async function requireAuth(): Promise<SafeUser> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("UNAUTHORIZED");
+  }
+  return user;
+}
+
+/**
+ * Retrieve authenticated session and resolve patient details if role is patient.
+ * Strictly verifies account status is ACTIVE.
+ */
+export async function getSession(req?: any): Promise<AuthSession | null> {
+  await connectToDatabase();
+
+  const authSvcSession = await AuthService.getSession(req);
+  if (authSvcSession) {
+    return {
+      user: authSvcSession.user,
+      patient: authSvcSession.patient,
+      role: authSvcSession.role as Role,
+      patientId: authSvcSession.patientId,
+    };
+  }
+
+  const token = await getRawSessionToken();
+  if (!token) {
     return null;
   }
 
-  const payload = verifySession(sessionCookie.value);
+  const payload = verifySession(token);
   if (!payload || !payload.userId) {
     return null;
   }
 
   const user = await User.findById(payload.userId);
-  if (!user || user.status !== "active") {
+  if (!user) {
+    return null;
+  }
+
+  const statusNorm = (user.status || "").toUpperCase();
+  if (statusNorm !== "ACTIVE") {
     return null;
   }
 
   let patient: IPatient | null = null;
-  if (user.role === ROLES.PATIENT) {
+  const roleNorm = (user.role || "").toLowerCase();
+  if (roleNorm === "patient") {
     patient = await Patient.findOne({ userId: user._id });
   }
 
@@ -190,24 +277,53 @@ export async function getSession(): Promise<AuthSession | null> {
   };
 }
 
+export class AuthError extends Error {
+  statusCode: number;
+
+  constructor(message: string, statusCode: number = 403) {
+    super(message);
+    this.name = "AuthError";
+    this.statusCode = statusCode;
+  }
+}
+
+export function normalizeRole(role?: string | null): string | null {
+  if (!role) return null;
+  const r = role.toUpperCase().trim();
+  if (r === "ADMIN" || r === "ADMINISTRATOR") return "ADMIN";
+  if (r === "RECEPTION" || r === "RECEPTIONIST") return "RECEPTIONIST";
+  if (r === "NURSE") return "NURSE";
+  if (r === "DOCTOR" || r === "PHYSICIAN") return "DOCTOR";
+  if (r === "LAB" || r === "LAB_TECHNICIAN" || r === "LABORATORY") return "LAB_TECHNICIAN";
+  if (r === "PATHOLOGIST" || r === "PATHOLOGY") return "PATHOLOGIST";
+  if (r === "PHARMACY" || r === "PHARMACIST") return "PHARMACIST";
+  if (r === "BILLING" || r === "BILLING_STAFF") return "BILLING_STAFF";
+  if (r === "PATIENT") return "PATIENT";
+  return null;
+}
+
 /**
  * Strictly require an authenticated patient session.
- * Throws an error or returns null if not authenticated as a patient.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
-export async function requirePatientSession(): Promise<{
+export async function requirePatientSession(req?: any): Promise<{
   user: IUser;
   patient: IPatient;
   patientId: string;
 }> {
-  const session = await getSession();
+  const session = await getSession(req);
 
-  if (
-    !session ||
-    session.role !== ROLES.PATIENT ||
-    !session.patient ||
-    !session.patientId
-  ) {
-    throw new Error("UNAUTHORIZED_PATIENT");
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
+  }
+
+  const role = normalizeRole(session.role);
+  if (role !== "PATIENT") {
+    throw new AuthError("Forbidden: Patient access required", 403);
+  }
+
+  if (!session.patient || !session.patientId) {
+    throw new AuthError("Forbidden: Patient profile not found for this account", 403);
   }
 
   return {
@@ -219,556 +335,306 @@ export async function requirePatientSession(): Promise<{
 
 /**
  * Retrieve authenticated receptionist session.
- * Falls back to default receptionist Sarah Adams if no active session.
  */
 export async function getReceptionSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.RECEPTION || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "RECEPTIONIST") {
+    return null;
   }
-
-  // Ensure database is seeded with receptionist
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const receptionUser = await User.findOne({
-    email: "sarah@reception.caresync.com",
-  });
-  if (receptionUser) {
-    try {
-      await setSessionCookie({
-        userId: receptionUser._id.toString(),
-        email: receptionUser.email,
-        role: receptionUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: receptionUser,
-      role: receptionUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated receptionist session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requireReceptionSession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getReceptionSession();
-  if (
-    !session ||
-    (session.role !== ROLES.RECEPTION && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_RECEPTION");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "RECEPTIONIST") {
+    throw new AuthError("Forbidden: Receptionist access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated nurse session.
- * Falls back to default nurse Arun Mary if no active session.
  */
 export async function getNurseSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.NURSE || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "NURSE") {
+    return null;
   }
-
-  // Ensure database is seeded with nurse
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const nurseUser = await User.findOne({
-    email: "arun.mary@nurse.caresync.com",
-  });
-  if (nurseUser) {
-    try {
-      await setSessionCookie({
-        userId: nurseUser._id.toString(),
-        email: nurseUser.email,
-        role: nurseUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: nurseUser,
-      role: nurseUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated nurse session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requireNurseSession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getNurseSession();
-  if (
-    !session ||
-    (session.role !== ROLES.NURSE && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_NURSE");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "NURSE") {
+    throw new AuthError("Forbidden: Nurse access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated doctor session.
- * Falls back to default doctor Dr. Anil Kumar if no active session.
  */
 export async function getDoctorSession(): Promise<{
   user: IUser;
   doctor: IDoctor;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.DOCTOR || user.role === ROLES.ADMIN)
-      ) {
-        let doctor = await Doctor.findOne({ userId: user._id });
-        if (!doctor) {
-          doctor = await Doctor.findOne({ name: /Anil/i }) || (await Doctor.findOne({}));
-        }
-        if (doctor) {
-          return { user, doctor, role: user.role };
-        }
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "DOCTOR") {
+    return null;
   }
 
-  // Ensure database is seeded with doctor
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const doctorUser = await User.findOne({
-    email: "anil@doctor.caresync.com",
-  });
-  const doctor = (await Doctor.findOne({ name: /Anil/i })) || (await Doctor.findOne({}));
-
-  if (doctorUser && doctor) {
-    try {
-      await setSessionCookie({
-        userId: doctorUser._id.toString(),
-        email: doctorUser.email,
-        role: doctorUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: doctorUser,
-      doctor,
-      role: doctorUser.role,
-    };
+  let doctor = await Doctor.findOne({ userId: session.user._id });
+  if (!doctor && session.user.profileId) {
+    doctor = await Doctor.findById(session.user.profileId);
+  }
+  if (!doctor) {
+    doctor =
+      (await Doctor.findOne({ name: session.user.name })) ||
+      (await Doctor.findOne({}));
+  }
+  if (!doctor) {
+    return null;
   }
 
-  return null;
+  return {
+    user: session.user,
+    doctor,
+    role: session.role,
+  };
 }
 
 /**
  * Strictly require an authenticated doctor session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requireDoctorSession(): Promise<{
   user: IUser;
   doctor: IDoctor;
   role: Role;
 }> {
-  const session = await getDoctorSession();
-  if (
-    !session ||
-    (session.role !== ROLES.DOCTOR && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_DOCTOR");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "DOCTOR") {
+    throw new AuthError("Forbidden: Doctor access required", 403);
+  }
+
+  const docSession = await getDoctorSession();
+  if (!docSession) {
+    throw new AuthError("Forbidden: Doctor profile not found", 403);
+  }
+  return docSession;
 }
 
 /**
  * Retrieve authenticated lab technician session.
- * Falls back to default technician Vikram Malhotra if no active session.
  */
 export async function getLabSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.LAB_TECHNICIAN || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "LAB_TECHNICIAN") {
+    return null;
   }
-
-  // Ensure database is seeded with lab technician
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const labUser = await User.findOne({
-    email: "vikram@lab.caresync.com",
-  });
-  if (labUser) {
-    try {
-      await setSessionCookie({
-        userId: labUser._id.toString(),
-        email: labUser.email,
-        role: labUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: labUser,
-      role: labUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated lab technician session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requireLabSession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getLabSession();
-  if (
-    !session ||
-    (session.role !== ROLES.LAB_TECHNICIAN && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_LAB_TECHNICIAN");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "LAB_TECHNICIAN") {
+    throw new AuthError("Forbidden: Lab Technician access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated pathologist session.
- * Falls back to default pathologist Dr. Sunita Patil if no active session.
  */
 export async function getPathologistSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.PATHOLOGIST || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "PATHOLOGIST") {
+    return null;
   }
-
-  // Ensure database is seeded with pathologist
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const pathologistUser = await User.findOne({
-    email: "sunita@pathology.caresync.com",
-  });
-  if (pathologistUser) {
-    try {
-      await setSessionCookie({
-        userId: pathologistUser._id.toString(),
-        email: pathologistUser.email,
-        role: pathologistUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: pathologistUser,
-      role: pathologistUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated pathologist session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requirePathologistSession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getPathologistSession();
-  if (
-    !session ||
-    (session.role !== ROLES.PATHOLOGIST && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_PATHOLOGIST");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "PATHOLOGIST") {
+    throw new AuthError("Forbidden: Pathologist access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated pharmacist session.
- * Falls back to default pharmacist Deepak Varma if no active session.
  */
 export async function getPharmacySession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.PHARMACY || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "PHARMACIST") {
+    return null;
   }
-
-  // Ensure database is seeded with pharmacist
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const pharmacyUser = await User.findOne({
-    email: "deepak@pharmacy.caresync.com",
-  });
-  if (pharmacyUser) {
-    try {
-      await setSessionCookie({
-        userId: pharmacyUser._id.toString(),
-        email: pharmacyUser.email,
-        role: pharmacyUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: pharmacyUser,
-      role: pharmacyUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated pharmacist session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requirePharmacySession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getPharmacySession();
-  if (
-    !session ||
-    (session.role !== ROLES.PHARMACY && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_PHARMACY");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "PHARMACIST") {
+    throw new AuthError("Forbidden: Pharmacist access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated billing staff session.
- * Falls back to default billing specialist Meera Nair if no active session.
  */
 export async function getBillingSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (
-        user &&
-        user.status === "active" &&
-        (user.role === ROLES.BILLING || user.role === ROLES.ADMIN)
-      ) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "BILLING_STAFF") {
+    return null;
   }
-
-  // Ensure database is seeded with billing staff
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const billingUser = await User.findOne({
-    email: "meera@billing.caresync.com",
-  });
-  if (billingUser) {
-    try {
-      await setSessionCookie({
-        userId: billingUser._id.toString(),
-        email: billingUser.email,
-        role: billingUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: billingUser,
-      role: billingUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated billing staff session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
 export async function requireBillingSession(): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getBillingSession();
-  if (
-    !session ||
-    (session.role !== ROLES.BILLING && session.role !== ROLES.ADMIN)
-  ) {
-    throw new Error("UNAUTHORIZED_BILLING");
+  const session = await getSession();
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "BILLING_STAFF") {
+    throw new AuthError("Forbidden: Billing Staff access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Retrieve authenticated administrator session.
- * Falls back to default administrator Alexander Wright if no active session.
  */
 export async function getAdminSession(): Promise<{
   user: IUser;
   role: Role;
 } | null> {
-  await connectToDatabase();
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-
-  if (sessionCookie?.value) {
-    const payload = verifySession(sessionCookie.value);
-    if (payload?.userId) {
-      const user = await User.findById(payload.userId);
-      if (user && user.status === "active" && user.role === ROLES.ADMIN) {
-        return { user, role: user.role };
-      }
-    }
+  const session = await getSession();
+  if (!session) return null;
+  const r = normalizeRole(session.role);
+  if (r !== "ADMIN") {
+    return null;
   }
-
-  // Ensure database is seeded with admin
-  const { seedCareSyncDatabase } = await import("@/lib/seed");
-  await seedCareSyncDatabase();
-
-  const adminUser = await User.findOne({
-    email: "admin@caresync.com",
-  });
-  if (adminUser) {
-    try {
-      await setSessionCookie({
-        userId: adminUser._id.toString(),
-        email: adminUser.email,
-        role: adminUser.role,
-      });
-    } catch {
-      // Ignore if called in read-only phase
-    }
-    return {
-      user: adminUser,
-      role: adminUser.role,
-    };
-  }
-
-  return null;
+  return { user: session.user, role: session.role };
 }
 
 /**
  * Strictly require an authenticated administrator session.
+ * Throws 401 if unauthenticated, 403 if unauthorized role.
  */
-export async function requireAdminSession(): Promise<{
+export async function requireAdminSession(req?: any): Promise<{
   user: IUser;
   role: Role;
 }> {
-  const session = await getAdminSession();
-  if (!session || session.role !== ROLES.ADMIN) {
-    throw new Error("UNAUTHORIZED_ADMIN");
+  const session = await getSession(req);
+  if (!session) {
+    throw new AuthError("Unauthorized: Authentication required", 401);
   }
-  return session;
+  const r = normalizeRole(session.role);
+  if (r !== "ADMIN") {
+    throw new AuthError("Forbidden: Administrator access required", 403);
+  }
+  return { user: session.user, role: session.role };
 }
+

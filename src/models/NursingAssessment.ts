@@ -1,40 +1,45 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 export interface INursingVitals {
-  bloodPressure?: string; // e.g. "120/80"
+  bloodPressure?: string;
   systolic?: number;
   diastolic?: number;
-  heartRate?: number; // bpm
-  oxygenSaturation?: number; // % (SpO2)
-  temperature?: number; // Fahrenheit
-  respiratoryRate?: number; // breaths/min
-  weightKg?: number; // kg
-  heightCm?: number; // cm
+  heartRate?: number;
+  oxygenSaturation?: number;
+  temperature?: number;
+  respiratoryRate?: number;
+  weightKg?: number;
+  heightCm?: number;
   bmi?: number;
-  painScore?: number; // 0-10
+  painScore?: number;
   recordedAt?: Date;
   notes?: string;
 }
 
 export interface INursingAssessment extends Document {
+  encounterId?: Types.ObjectId;
   patientId: Types.ObjectId;
   nurseId?: Types.ObjectId;
-  nurseName: string;
+  nurseName?: string;
   queueId?: Types.ObjectId;
   appointmentId?: Types.ObjectId;
   doctorId?: Types.ObjectId;
-  vitals: INursingVitals;
   chiefComplaint: string;
   symptoms: string[];
+  observations: string;
+  condition: string;
+  mobility: string;
+  pain?: string | number;
   painLocation?: string;
   painCharacteristics?: string;
-  observations: string;
-  condition: "stable" | "critical" | "needs-monitoring" | "acute";
-  mobility: "independent" | "assisted" | "wheelchair" | "stretcher" | "bedridden";
-  triagePriority: "normal" | "priority" | "urgent";
+  notes?: string;
+  priority?: string;
+  triagePriority?: string; // Backwards compatibility
+  doctorHandoff?: string;
   doctorHandoffNotes?: string;
   generalNotes?: string;
-  status: "draft" | "completed";
+  vitals?: INursingVitals;
+  status: "DRAFT" | "COMPLETED" | "draft" | "completed";
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +47,11 @@ export interface INursingAssessment extends Document {
 
 const NursingAssessmentSchema = new Schema<INursingAssessment>(
   {
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
+      index: true,
+    },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
@@ -55,7 +65,6 @@ const NursingAssessmentSchema = new Schema<INursingAssessment>(
     },
     nurseName: {
       type: String,
-      default: "Arun Mary, RN",
       trim: true,
     },
     queueId: {
@@ -73,6 +82,68 @@ const NursingAssessmentSchema = new Schema<INursingAssessment>(
       ref: "Doctor",
       index: true,
     },
+    chiefComplaint: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "Routine clinical assessment",
+    },
+    symptoms: {
+      type: [String],
+      default: [],
+    },
+    observations: {
+      type: String,
+      trim: true,
+      default: "Alert, oriented and responsive.",
+    },
+    condition: {
+      type: String,
+      default: "stable",
+      trim: true,
+    },
+    mobility: {
+      type: String,
+      default: "independent",
+      trim: true,
+    },
+    pain: {
+      type: Schema.Types.Mixed,
+      default: "0",
+    },
+    painLocation: {
+      type: String,
+      trim: true,
+    },
+    painCharacteristics: {
+      type: String,
+      trim: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+    },
+    priority: {
+      type: String,
+      default: "normal",
+      trim: true,
+    },
+    triagePriority: {
+      type: String,
+      trim: true,
+    },
+    doctorHandoff: {
+      type: String,
+      trim: true,
+    },
+    doctorHandoffNotes: {
+      type: String,
+      trim: true,
+    },
+    generalNotes: {
+      type: String,
+      trim: true,
+    },
     vitals: {
       bloodPressure: { type: String, trim: true },
       systolic: { type: Number },
@@ -88,58 +159,10 @@ const NursingAssessmentSchema = new Schema<INursingAssessment>(
       recordedAt: { type: Date, default: Date.now },
       notes: { type: String, trim: true },
     },
-    chiefComplaint: {
-      type: String,
-      required: true,
-      trim: true,
-      default: "Routine clinical assessment",
-    },
-    symptoms: {
-      type: [String],
-      default: [],
-    },
-    painLocation: {
-      type: String,
-      trim: true,
-    },
-    painCharacteristics: {
-      type: String,
-      trim: true,
-    },
-    observations: {
-      type: String,
-      trim: true,
-      default: "Alert, oriented and responsive.",
-    },
-    condition: {
-      type: String,
-      enum: ["stable", "critical", "needs-monitoring", "acute"],
-      default: "stable",
-      index: true,
-    },
-    mobility: {
-      type: String,
-      enum: ["independent", "assisted", "wheelchair", "stretcher", "bedridden"],
-      default: "independent",
-    },
-    triagePriority: {
-      type: String,
-      enum: ["normal", "priority", "urgent"],
-      default: "normal",
-      index: true,
-    },
-    doctorHandoffNotes: {
-      type: String,
-      trim: true,
-    },
-    generalNotes: {
-      type: String,
-      trim: true,
-    },
     status: {
       type: String,
-      enum: ["draft", "completed"],
-      default: "draft",
+      enum: ["DRAFT", "COMPLETED", "draft", "completed"],
+      default: "DRAFT",
       index: true,
     },
     completedAt: {
@@ -151,8 +174,29 @@ const NursingAssessmentSchema = new Schema<INursingAssessment>(
   }
 );
 
+// Pre-save synchronization
+NursingAssessmentSchema.pre<INursingAssessment>("save", function () {
+  if (!this.notes && this.generalNotes) {
+    this.notes = this.generalNotes;
+  }
+  if (!this.generalNotes && this.notes) {
+    this.generalNotes = this.notes;
+  }
+  if (!this.doctorHandoff && this.doctorHandoffNotes) {
+    this.doctorHandoff = this.doctorHandoffNotes;
+  }
+  if (!this.doctorHandoffNotes && this.doctorHandoff) {
+    this.doctorHandoffNotes = this.doctorHandoff;
+  }
+  if (!this.priority && this.triagePriority) {
+    this.priority = this.triagePriority;
+  }
+  if (!this.triagePriority && this.priority) {
+    this.triagePriority = this.priority;
+  }
+});
+
 NursingAssessmentSchema.index({ patientId: 1, createdAt: -1 });
-NursingAssessmentSchema.index({ status: 1, createdAt: -1 });
 
 export const NursingAssessment: Model<INursingAssessment> =
   mongoose.models.NursingAssessment ||

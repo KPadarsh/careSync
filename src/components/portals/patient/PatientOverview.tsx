@@ -8,6 +8,8 @@ import { QuickActions } from "./QuickActions";
 import { HealthProfileCard } from "./HealthProfileCard";
 import { RecentActivityFeed, ActivityItem } from "./RecentActivityFeed";
 
+import { PageHeader } from "@/components/ui/PageHeader";
+
 interface DashboardData {
   patient: {
     name: string;
@@ -122,56 +124,52 @@ export function PatientOverview() {
       ]
     : undefined;
 
-  const patientName = data?.patient.name?.split(" ")[0] || "Rahul";
+  const patientName = data?.patient.name?.split(" ")[0] || "Patient";
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-600 border-t-transparent" />
         <p className="text-sm font-medium text-slate-500">Loading your health overview...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Page Header with Greeting & Action Buttons */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-[32px] sm:leading-[40px] font-bold text-[#0b1c30] tracking-tight">
-            Good morning, {patientName}
-          </h2>
-          <p className="text-sm text-[#45464d] mt-1">
-            Here is your health overview and scheduled clinical activities.
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title={`Welcome, ${patientName}`}
+        description="Here is your personal health overview and scheduled clinical activities."
+        badge={{ label: `MRN: ${data?.patient.mrn || "Verified"}`, tone: "info" }}
+        action={
+          <div className="flex items-center gap-3">
+            <Link href="/patient/appointments">
+              <button
+                type="button"
+                className="px-3.5 py-1.5 bg-slate-900 text-white rounded-lg shadow-xs text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Book Appointment</span>
+              </button>
+            </Link>
 
-        <div className="flex items-center gap-3">
-          <Link href="/patient/appointments">
-            <button
-              type="button"
-              className="px-4 py-2 bg-[#131b2e] text-white rounded-lg shadow-sm text-sm font-medium hover:bg-[#213145] transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Book Appointment</span>
-            </button>
-          </Link>
-
-          <Link href="/patient/lab-reports">
-            <button
-              type="button"
-              className="px-4 py-2 bg-white border border-[#e2e8f0] rounded-lg shadow-sm text-sm font-medium text-[#0b1c30] hover:bg-[#eff4ff] transition-colors flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>Download Report</span>
-            </button>
-          </Link>
-        </div>
-      </div>
+            <Link href="/patient/lab-reports">
+              <button
+                type="button"
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-xs text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Reports</span>
+              </button>
+            </Link>
+          </div>
+        }
+      />
 
       {/* Follow-up Reminder Banner (if any active follow-up from doctor) */}
       {data?.activeFollowUp && (

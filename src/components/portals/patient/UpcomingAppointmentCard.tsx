@@ -11,13 +11,32 @@ export interface UpcomingAppointmentProps {
 }
 
 export function UpcomingAppointmentCard({
-  doctorName = "Dr. Anjali Menon",
-  specialty = "General Medicine",
-  date = "Tomorrow",
-  time = "10:30 AM",
+  doctorName,
+  specialty = "General Practice",
+  date = "Upcoming",
+  time = "TBD",
   status = "Confirmed",
-  avatarUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuCUxUcfzaYOvK9K8s2-jCEYcCiZbqTYVelTwDmfFa3f1itzv7NxhEv1pjNI5AAAM8Wo8KFVRmMK9uYKFbfVQieZKmlkh2UQ7Rrq2PIBHsx9nbF8xjm9-18_QrHoFN6SnfWAOEPp1Q-ETmupLekP79pMmugtCZdwzF0bQxXgT6Bt4YS-d0SF3n4aC0REf5mllD-eLVLWKiEN8WPisgCA-p8cVWYoLwnV0mzwl0-Gd8FXhPJp2Veap7zk7w",
+  avatarUrl,
 }: UpcomingAppointmentProps) {
+  if (!doctorName) {
+    return (
+      <section className="bg-white rounded-xl border border-[#e2e8f0] p-6 text-center space-y-2 shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)]">
+        <p className="text-sm font-semibold text-[#0b1c30]">No Upcoming Appointments</p>
+        <p className="text-xs text-[#45464d]">
+          You have no scheduled consultations. Book one anytime with our medical staff.
+        </p>
+        <div className="pt-2">
+          <Link
+            href="/patient/appointments"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#131b2e] text-white text-xs font-semibold rounded-lg hover:bg-[#213145]"
+          >
+            Book an Appointment
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="bg-white rounded-xl border border-[#e2e8f0] shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] overflow-hidden">
       {/* Card Header Banner */}
@@ -33,9 +52,12 @@ export function UpcomingAppointmentCard({
       <div className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex gap-5 items-center">
           {/* Doctor Avatar */}
-          <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#dce9ff] shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatarUrl} alt={doctorName} className="w-full h-full object-cover" />
+          <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#dce9ff] shrink-0 bg-blue-50 flex items-center justify-center text-blue-700 font-bold text-lg">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={doctorName} className="w-full h-full object-cover" />
+            ) : (
+              <span>{doctorName.replace("Dr. ", "").slice(0, 2).toUpperCase()}</span>
+            )}
           </div>
 
           <div>

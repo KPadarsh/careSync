@@ -1,10 +1,17 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
+export interface INotificationRelatedResource {
+  resourceType?: string;
+  resourceId?: string;
+}
+
 export interface INotification extends Document {
-  recipientId: Types.ObjectId; // User ID
+  recipientUserId?: Types.ObjectId;
+  recipientId?: Types.ObjectId; // Backwards compatibility
   title: string;
   message: string;
-  type: "appointment" | "prescription" | "lab_report" | "follow_up" | "system";
+  type: string;
+  relatedResource?: INotificationRelatedResource;
   link?: string;
   isRead: boolean;
   createdAt: Date;
@@ -13,26 +20,48 @@ export interface INotification extends Document {
 
 const NotificationSchema = new Schema<INotification>(
   {
+    recipientUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
     recipientId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
     },
     title: { type: String, required: true, trim: true },
     message: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ["appointment", "prescription", "lab_report", "follow_up", "system"],
       default: "system",
+      trim: true,
+      index: true,
     },
-    link: { type: String },
+    relatedResource: {
+      resourceType: { type: String, trim: true },
+      resourceId: { type: String, trim: true },
+    },
+    link: { type: String, trim: true },
     isRead: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,
   }
 );
+
+// Pre-save synchronization hook
+NotificationSchema.pre<INotification>("save", function () {
+  if (!this.recipientUserId && this.recipientId) {
+    this.recipientUserId = this.recipientId;
+  }
+  if (!this.recipientId && this.recipientUserId) {
+    this.recipientId = this.recipientUserId;
+  }
+});
+
+NotificationSchema.index({ recipientUserId: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ recipientId: 1, isRead: 1, createdAt: -1 });
 
 export const Notification: Model<INotification> =
   mongoose.models.Notification ||

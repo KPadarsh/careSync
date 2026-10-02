@@ -31,24 +31,17 @@ export const NursingAssessmentView: React.FC<NursingAssessmentProps> = ({ patien
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Assessment fields
-  const [chiefComplaint, setChiefComplaint] = useState(
-    "Mild headache and recurring chest discomfort during exertion for past 2 days"
-  );
-  const [symptoms, setSymptoms] = useState<string[]>([
-    "Chest discomfort / tightness (moderate, 2 days)",
-    "Dull frontal headache (mild, 3 days)",
-  ]);
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [symptoms, setSymptoms] = useState<string[]>([]);
   const [newSymptomText, setNewSymptomText] = useState("");
   const [newSymptomDuration, setNewSymptomDuration] = useState("1 day");
   const [newSymptomSeverity, setNewSymptomSeverity] = useState("Moderate");
 
-  const [painScore, setPainScore] = useState(3);
-  const [painLocation, setPainLocation] = useState("Mid-sternal");
-  const [painCharacteristics, setPainCharacteristics] = useState("Dull pressure, non-radiating");
+  const [painScore, setPainScore] = useState(0);
+  const [painLocation, setPainLocation] = useState("");
+  const [painCharacteristics, setPainCharacteristics] = useState("");
 
-  const [observations, setObservations] = useState(
-    "Patient alert, oriented x4, sitting comfortably in triage chair. Skin warm and dry. No acute respiratory distress. Radial pulses bilateral +2 regular. Mild substernal chest soreness elicited on deep inspiration."
-  );
+  const [observations, setObservations] = useState("");
 
   const [condition, setCondition] = useState<"stable" | "critical" | "needs-monitoring" | "acute">(
     "stable"
@@ -57,13 +50,11 @@ export const NursingAssessmentView: React.FC<NursingAssessmentProps> = ({ patien
     "independent"
   );
   const [triagePriority, setTriagePriority] = useState<"normal" | "priority" | "urgent">(
-    "priority"
+    "normal"
   );
 
-  const [doctorHandoffNotes, setDoctorHandoffNotes] = useState(
-    "Patient noted exertion-related chest pressure. Baseline ECG recommended. Cleared for cardiology consultation."
-  );
-  const [generalNotes, setGeneralNotes] = useState("Patient accompanied by family member.");
+  const [doctorHandoffNotes, setDoctorHandoffNotes] = useState("");
+  const [generalNotes, setGeneralNotes] = useState("");
 
   const fetchAssessment = async () => {
     try {

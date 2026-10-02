@@ -1,90 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Icons } from "./ReceptionIcons";
-
-interface NotificationItem {
-  _id: string;
-  title: string;
-  message: string;
-  type: "appointment" | "prescription" | "lab_report" | "follow_up" | "system";
-  link?: string;
-  isRead: boolean;
-  createdAt: string;
-}
+import { useNotifications } from "@/hooks/useNotifications";
 
 export function NotificationsView() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
   const [typeFilter, setTypeFilter] = useState("all");
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/reception/notifications?type=${typeFilter}`);
-      if (!res.ok) throw new Error("Failed to load alerts");
-      const json = await res.json();
-      setNotifications(json.notifications || []);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error fetching alerts");
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter]);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      const res = await fetch("/api/reception/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) {
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
-        );
-      }
-    } catch {
-      // silently ignore
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      const res = await fetch("/api/reception/notifications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ all: true }),
-      });
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleClearRead = async () => {
-    try {
-      const res = await fetch("/api/reception/notifications", {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setNotifications((prev) => prev.filter((n) => !n.isRead));
-      }
-    } catch {
-      // ignore
-    }
-  };
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const filteredNotifications = notifications.filter((item) => {
+    if (typeFilter === "all") return true;
+    return item.type === typeFilter;
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -109,14 +43,14 @@ export function NotificationsView() {
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <button
-              onClick={handleMarkAllRead}
+              onClick={markAllAsRead}
               className="px-3 py-1.5 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors"
             >
               Mark all read
             </button>
           )}
           <button
-            onClick={handleClearRead}
+            onClick={markAllAsRead}
             className="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg shadow-2xs transition-colors"
           >
             Clear read
@@ -153,9 +87,7 @@ export function NotificationsView() {
             <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
             <p className="text-xs text-slate-500">Checking alerts...</p>
           </div>
-        ) : error ? (
-          <div className="p-8 text-center text-rose-600 text-xs">{error}</div>
-        ) : notifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <div className="py-16 text-center space-y-3">
             <Icons.Notifications className="w-10 h-10 text-slate-300 mx-auto" />
             <h3 className="text-sm font-bold text-slate-800">No notifications</h3>
@@ -164,14 +96,15 @@ export function NotificationsView() {
             </p>
           </div>
         ) : (
-          notifications.map((item) => {
+          filteredNotifications.map((item) => {
             const isSystem = item.type === "system";
             const isAppointment = item.type === "appointment";
+            const notifId = item.id || item._id;
 
             return (
               <div
-                key={item._id}
-                onClick={() => !item.isRead && handleMarkAsRead(item._id)}
+                key={notifId}
+                onClick={() => !item.isRead && markAsRead((notifId || "") as string)}
                 className={`p-4 transition-colors flex items-start justify-between gap-4 cursor-pointer ${
                   !item.isRead ? "bg-teal-50/20 hover:bg-teal-50/40" : "hover:bg-slate-50"
                 }`}
@@ -222,7 +155,7 @@ export function NotificationsView() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleMarkAsRead(item._id);
+                      markAsRead((notifId || "") as string);
                     }}
                     className="text-[11px] font-semibold text-teal-800 hover:text-teal-950 p-1 shrink-0"
                   >

@@ -213,8 +213,8 @@ export function DispensingDetailView({ id }: DispensingDetailViewProps) {
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">
             Dispensed Medications & Verification
           </h3>
-          <div className="border border-slate-800/80 rounded-xl overflow-hidden">
-            <table className="w-full text-left text-xs">
+          <div className="border border-slate-800/80 rounded-xl overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[500px]">
               <thead className="bg-[#08101E] text-slate-400 uppercase font-semibold text-[10px] border-b border-slate-800">
                 <tr>
                   <th className="px-4 py-3">Medicine</th>

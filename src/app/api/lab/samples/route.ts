@@ -74,12 +74,12 @@ export async function GET(request: NextRequest) {
             mrn: s.patientId?.mrn || "MRN-N/A",
             age,
             gender: s.patientId?.gender || "unknown",
-            bloodGroup: s.patientId?.bloodGroup || "O+",
+            bloodGroup: s.patientId?.bloodGroup || "—",
             avatar: s.patientId?.userId?.avatar,
           },
           doctor: {
             _id: s.doctorId?._id?.toString(),
-            name: s.doctorId?.name || "Dr. Anil Kumar",
+            name: s.doctorId?.name || "Ordering Physician",
             specialty: s.doctorId?.specialty || "Internal Medicine",
           },
         };
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     const session = await requireLabSession();
-    const technicianName = session.user.name || "Vikram Malhotra, MLT";
+    const technicianName = session.user.name || "Lab Technician";
     const body = await request.json();
 
     const {

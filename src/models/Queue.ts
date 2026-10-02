@@ -1,18 +1,45 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
+export type QueueStatus =
+  | "WAITING"
+  | "IN_ASSESSMENT"
+  | "READY_FOR_DOCTOR"
+  | "IN_CONSULTATION"
+  | "COMPLETED"
+  | "waiting"
+  | "in-assessment"
+  | "ready-for-doctor"
+  | "in-consultation"
+  | "completed"
+  | "called"
+  | "cancelled";
+
+export type QueuePriority =
+  | "NORMAL"
+  | "PRIORITY"
+  | "URGENT"
+  | "normal"
+  | "priority"
+  | "urgent"
+  | "vip";
+
 export interface IQueue extends Document {
+  encounterId?: Types.ObjectId;
   patientId: Types.ObjectId;
   doctorId: Types.ObjectId;
   appointmentId?: Types.ObjectId;
   ticketNumber: string;
-  department: string;
+  department?: string;
   roomNumber?: string;
-  status: "waiting" | "in-assessment" | "ready-for-doctor" | "in-consultation" | "completed" | "called" | "cancelled";
-  priority: "normal" | "priority" | "urgent" | "vip";
-  source: "appointment" | "walk-in";
+  status: QueueStatus;
+  priority: QueuePriority;
+  source?: "appointment" | "walk-in" | string;
+  checkedInAt: Date;
   checkedInTime: Date;
   calledTime?: Date;
-  completedTime?: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+  completedTime?: Date; // Backwards compatibility
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +47,10 @@ export interface IQueue extends Document {
 
 const QueueSchema = new Schema<IQueue>(
   {
+    encounterId: {
+      type: Schema.Types.ObjectId,
+      ref: "Encounter",
+    },
     patientId: {
       type: Schema.Types.ObjectId,
       ref: "Patient",
@@ -42,27 +73,43 @@ const QueueSchema = new Schema<IQueue>(
       required: true,
       trim: true,
       index: true,
+      default: function (this: IQueue) {
+        return `Q-${Math.floor(100 + Math.random() * 900)}`;
+      },
     },
     department: {
       type: String,
-      required: true,
       trim: true,
+      default: "General OPD",
     },
     roomNumber: {
       type: String,
       trim: true,
-      default: "Room 302",
+      default: "Room 101",
     },
     status: {
       type: String,
-      enum: ["waiting", "in-assessment", "ready-for-doctor", "in-consultation", "completed", "called", "cancelled"],
-      default: "waiting",
+      enum: [
+        "WAITING",
+        "IN_ASSESSMENT",
+        "READY_FOR_DOCTOR",
+        "IN_CONSULTATION",
+        "COMPLETED",
+        "waiting",
+        "in-assessment",
+        "ready-for-doctor",
+        "in-consultation",
+        "completed",
+        "called",
+        "cancelled",
+      ],
+      default: "WAITING",
       index: true,
     },
     priority: {
       type: String,
-      enum: ["normal", "priority", "urgent", "vip"],
-      default: "normal",
+      enum: ["NORMAL", "PRIORITY", "URGENT", "normal", "priority", "urgent", "vip"],
+      default: "NORMAL",
       index: true,
     },
     source: {
@@ -70,12 +117,23 @@ const QueueSchema = new Schema<IQueue>(
       enum: ["appointment", "walk-in"],
       default: "appointment",
     },
+    checkedInAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
     checkedInTime: {
       type: Date,
       default: Date.now,
       index: true,
     },
     calledTime: {
+      type: Date,
+    },
+    startedAt: {
+      type: Date,
+    },
+    completedAt: {
       type: Date,
     },
     completedTime: {
@@ -91,11 +149,22 @@ const QueueSchema = new Schema<IQueue>(
   }
 );
 
-QueueSchema.index({ doctorId: 1, status: 1, checkedInTime: 1 });
+QueueSchema.pre<IQueue>("save", function () {
+  if (!this.checkedInAt && this.checkedInTime) {
+    this.checkedInAt = this.checkedInTime;
+  }
+  if (!this.checkedInTime && this.checkedInAt) {
+    this.checkedInTime = this.checkedInAt;
+  }
+  if (!this.completedAt && this.completedTime) {
+    this.completedAt = this.completedTime;
+  }
+  if (!this.completedTime && this.completedAt) {
+    this.completedTime = this.completedAt;
+  }
+});
 
-if (mongoose.models.Queue) {
-  delete (mongoose.models as any).Queue;
-}
+QueueSchema.index({ doctorId: 1, status: 1, checkedInAt: 1 });
 
 export const Queue: Model<IQueue> =
   mongoose.models.Queue || mongoose.model<IQueue>("Queue", QueueSchema);

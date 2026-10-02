@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { HistoryView } from "@/components/portals/billing";
+import { BillingShell, HistoryView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Billing History & Audit Ledger | CareSync Financial Operations",
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function HistoryPage() {
-  return <HistoryView />;
+  return (
+    <BillingShell>
+      <HistoryView />
+    </BillingShell>
+  );
 }

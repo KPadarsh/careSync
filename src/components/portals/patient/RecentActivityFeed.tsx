@@ -7,27 +7,6 @@ export interface ActivityItem {
   status: "success" | "info" | "neutral" | "warning";
 }
 
-const defaultActivities: ActivityItem[] = [
-  {
-    id: "act-1",
-    title: "Lab report verified",
-    timestamp: "Today, 09:45 AM",
-    status: "success",
-  },
-  {
-    id: "act-2",
-    title: "Appointment booked",
-    timestamp: "Yesterday, 14:20 PM",
-    status: "info",
-  },
-  {
-    id: "act-3",
-    title: "Prescription updated",
-    timestamp: "Aug 30, 2023",
-    status: "neutral",
-  },
-];
-
 const timelineNodeStyles: Record<string, { ring: string; dot: string }> = {
   success: {
     ring: "bg-[#22c55e]/20 border-[#22c55e]",
@@ -48,7 +27,7 @@ const timelineNodeStyles: Record<string, { ring: string; dot: string }> = {
 };
 
 export function RecentActivityFeed({
-  activities = defaultActivities,
+  activities = [],
 }: {
   activities?: ActivityItem[];
 }) {
@@ -56,8 +35,14 @@ export function RecentActivityFeed({
     <div className="bg-white rounded-xl border border-[#e2e8f0] p-6 shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)]">
       <h3 className="text-base font-semibold text-[#0b1c30] mb-5">Recent Activity</h3>
 
-      <div className="relative border-l border-[#e2e8f0] ml-3 space-y-6">
-        {activities.map((item) => {
+      {activities.length === 0 ? (
+        <div className="py-8 text-center text-xs text-[#45464d]">
+          <p className="font-medium text-slate-700">No Recent Activity</p>
+          <p className="mt-1 text-slate-400">Your clinical and diagnostic events will appear here.</p>
+        </div>
+      ) : (
+        <div className="relative border-l border-[#e2e8f0] ml-3 space-y-6">
+          {activities.map((item) => {
           const style = timelineNodeStyles[item.status] || timelineNodeStyles.neutral;
           return (
             <div key={item.id} className="relative pl-6">
@@ -78,6 +63,7 @@ export function RecentActivityFeed({
           );
         })}
       </div>
+      )}
 
       <Link
         href="/patient/medical-records"

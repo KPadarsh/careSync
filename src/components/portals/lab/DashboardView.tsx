@@ -15,6 +15,8 @@ import {
   BeakerIcon,
   ArrowRightIcon,
 } from "./LabIcons";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 
 interface DashboardData {
   metrics: {
@@ -178,178 +180,92 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-[#00355f]">
-              Lab Technician Dashboard
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[11px] font-semibold uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-              Live Analytical Session
-            </span>
+      {/* PAGE HEADER */}
+      <PageHeader
+        title="Lab Technician Dashboard"
+        description={`Logged in as ${technician.name} • ${technician.station} • ${technician.shift}`}
+        badge={{ label: "Live Analytical Session", tone: "info" }}
+        action={
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={fetchDashboard}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
+            >
+              <RefreshIcon
+                size={14}
+                className={refreshing ? "animate-spin text-teal-600" : "text-slate-500"}
+              />
+              <span>{refreshing ? "Refreshing..." : "Refresh Queue"}</span>
+            </button>
+
+            <Link
+              href="/lab/requests"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
+            >
+              <span>View All Requisitions</span>
+              <ChevronRightIcon size={14} />
+            </Link>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Logged in as <strong className="font-semibold text-slate-700">{technician.name}</strong> •{" "}
-            {technician.station} • {technician.shift}
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={fetchDashboard}
-            disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs transition-all"
-          >
-            <RefreshIcon
-              size={14}
-              className={refreshing ? "animate-spin text-teal-600" : "text-slate-500"}
-            />
-            <span>{refreshing ? "Refreshing..." : "Refresh Queue"}</span>
-          </button>
-
-          <Link
-            href="/lab/requests"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
-          >
-            <span>View All Requisitions</span>
-            <ChevronRightIcon size={14} />
-          </Link>
-        </div>
-      </div>
-
-      {/* 5 PRIMARY DASHBOARD TILES (Required by Prompt) */}
+      {/* 5 PRIMARY DASHBOARD TILES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {/* Tile 1: New Requests */}
-        <Link
-          href="/lab/requests?status=requested"
-          className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-xs hover:border-[#0f4c81] hover:shadow-sm transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              New Requests
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
-              <RequestsIcon size={18} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold text-[#00355f]">
-                {metrics.newRequests}
-              </span>
-              <span className="text-xs text-slate-500">doctor orders</span>
-            </div>
-            <span className="text-[11px] text-blue-600 mt-1 block font-medium">
-              Awaiting intake
-            </span>
-          </div>
+        <Link href="/lab/requests?status=requested" className="block group">
+          <StatCard
+            label="New Requests"
+            value={metrics.newRequests}
+            subtext="Awaiting intake"
+            icon={<RequestsIcon size={18} />}
+            tone="info"
+            className="group-hover:border-blue-400 transition-all cursor-pointer"
+          />
         </Link>
 
-        {/* Tile 2: Samples Pending */}
-        <Link
-          href="/lab/requests?status=sample_pending"
-          className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-xs hover:border-[#0f4c81] hover:shadow-sm transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Samples Pending
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <ClockIcon size={18} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold text-amber-700">
-                {metrics.samplesPending}
-              </span>
-              <span className="text-xs text-slate-500">specimens</span>
-            </div>
-            <span className="text-[11px] text-amber-600 mt-1 block font-medium">
-              Need collection
-            </span>
-          </div>
+        <Link href="/lab/requests?status=sample_pending" className="block group">
+          <StatCard
+            label="Samples Pending"
+            value={metrics.samplesPending}
+            subtext="Need collection"
+            icon={<ClockIcon size={18} />}
+            tone="warning"
+            className="group-hover:border-amber-400 transition-all cursor-pointer"
+          />
         </Link>
 
-        {/* Tile 3: Processing Tests */}
-        <Link
-          href="/lab/tests"
-          className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-xs hover:border-[#0f4c81] hover:shadow-sm transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Processing Tests
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
-              <TestsIcon size={18} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold text-purple-700">
-                {metrics.processingTests}
-              </span>
-              <span className="text-xs text-slate-500">at benches</span>
-            </div>
-            <span className="text-[11px] text-purple-600 mt-1 block font-medium">
-              On analyzers
-            </span>
-          </div>
+        <Link href="/lab/tests" className="block group">
+          <StatCard
+            label="Processing Tests"
+            value={metrics.processingTests}
+            subtext="On analyzers"
+            icon={<TestsIcon size={18} />}
+            tone="primary"
+            className="group-hover:border-teal-400 transition-all cursor-pointer"
+          />
         </Link>
 
-        {/* Tile 4: Results Awaiting Submission */}
-        <Link
-          href="/lab/requests?status=result_entered"
-          className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-xs hover:border-[#0f4c81] hover:shadow-sm transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Awaiting Submission
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center">
-              <BeakerIcon size={18} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold text-cyan-700">
-                {metrics.resultsAwaitingSubmission}
-              </span>
-              <span className="text-xs text-slate-500">entered</span>
-            </div>
-            <span className="text-[11px] text-cyan-600 mt-1 block font-medium">
-              Ready for review
-            </span>
-          </div>
+        <Link href="/lab/requests?status=result_entered" className="block group">
+          <StatCard
+            label="Awaiting Submission"
+            value={metrics.resultsAwaitingSubmission}
+            subtext="Ready for review"
+            icon={<BeakerIcon size={18} />}
+            tone="info"
+            className="group-hover:border-cyan-400 transition-all cursor-pointer"
+          />
         </Link>
 
-        {/* Tile 5: Completed Work */}
-        <Link
-          href="/lab/completed"
-          className="bg-white rounded-xl p-4 border border-slate-200/90 shadow-xs hover:border-[#0f4c81] hover:shadow-sm transition-all flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Completed Work
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-[#006a68] flex items-center justify-center">
-              <CompletedIcon size={18} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold text-[#006a68]">
-                {metrics.completedWork}
-              </span>
-              <span className="text-xs text-slate-500">verified</span>
-            </div>
-            <span className="text-[11px] text-[#006a68] mt-1 block font-medium">
-              Archived / Released
-            </span>
-          </div>
+        <Link href="/lab/completed" className="block group">
+          <StatCard
+            label="Completed Work"
+            value={metrics.completedWork}
+            subtext="Archived / Released"
+            icon={<CompletedIcon size={18} />}
+            tone="success"
+            className="group-hover:border-emerald-400 transition-all cursor-pointer"
+          />
         </Link>
       </div>
 

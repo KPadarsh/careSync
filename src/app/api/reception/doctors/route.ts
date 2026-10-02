@@ -8,7 +8,7 @@ export async function GET() {
     await connectToDatabase();
     await requireReceptionSession();
 
-    const doctors = await Doctor.find({ status: "active" }).sort({ name: 1 });
+    const doctors = await Doctor.find({ status: { $in: ["active", "ACTIVE"] } }).sort({ name: 1 });
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);

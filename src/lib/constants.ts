@@ -20,4 +20,14 @@ export const ROLES = {
   BILLING: "billing",
 } as const;
 
-export type Role = (typeof ROLES)[keyof typeof ROLES];
+export type Role =
+  | (typeof ROLES)[keyof typeof ROLES]
+  | "PATIENT"
+  | "RECEPTIONIST"
+  | "NURSE"
+  | "DOCTOR"
+  | "LAB_TECHNICIAN"
+  | "PATHOLOGIST"
+  | "PHARMACIST"
+  | "BILLING_STAFF"
+  | "ADMIN";

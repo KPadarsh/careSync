@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export interface NavigationItem {
   label: string;
@@ -34,6 +35,7 @@ export function Sidebar({
   onClose,
   className = "",
 }: SidebarProps) {
+  const router = useRouter();
   return (
     <>
       {/* Mobile Backdrop */}
@@ -47,7 +49,7 @@ export function Sidebar({
 
       {/* Sidebar Container - Exact Stitch 280px Dark Navy Shell */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-[#1e293b] bg-[#131b2e] text-white transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 h-full overflow-y-auto flex-col border-r border-[#1e293b] bg-[#131b2e] text-white transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } ${className}`}
         aria-label="Sidebar Navigation"
@@ -154,15 +156,23 @@ export function Sidebar({
                 Help Center
               </Link>
 
-              <Link
-                href="/"
-                className="flex items-center gap-3 px-4 py-2 rounded text-[#7c839b] hover:text-white hover:bg-white/5 text-[13px] font-medium transition-colors"
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                  } catch {
+                    // ignore
+                  }
+                  router.push("/");
+                }}
+                className="w-full text-left flex items-center gap-3 px-4 py-2 rounded text-[#7c839b] hover:text-white hover:bg-white/5 text-[13px] font-medium transition-colors cursor-pointer"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 Logout
-              </Link>
+              </button>
             </>
           )}
         </div>

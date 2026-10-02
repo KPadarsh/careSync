@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { InvoiceDetailView } from "@/components/portals/billing";
+import { BillingShell, InvoiceDetailView } from "@/components/portals/billing";
 
 export const metadata: Metadata = {
   title: "Invoice Details | CareSync Financial Operations",
@@ -12,5 +12,9 @@ interface PageProps {
 
 export default async function InvoiceDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <InvoiceDetailView id={id} />;
+  return (
+    <BillingShell>
+      <InvoiceDetailView id={id} />
+    </BillingShell>
+  );
 }

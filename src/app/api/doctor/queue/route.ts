@@ -8,6 +8,7 @@ import {
   Appointment,
   NursingAssessment,
 } from "@/models";
+import { logAuditEvent } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
     console.error("Doctor queue API error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load doctor queue" },
-      { status: 500 }
+      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
     );
   }
 }
@@ -199,14 +200,60 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (action === "start-consultation" || action === "call-patient") {
+    if (
+      action === "start-consultation" ||
+      action === "start_consultation" ||
+      action === "call-patient" ||
+      action === "call_patient"
+    ) {
       queue.status = "in-consultation";
       queue.calledTime = new Date();
       await queue.save();
-    } else if (action === "complete-consultation") {
+
+      if (queue.appointmentId) {
+        await Appointment.findByIdAndUpdate(queue.appointmentId, {
+          status: "in-progress",
+        });
+      }
+
+      await logAuditEvent({
+        actor: {
+          userId: session.user._id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role,
+        },
+        action: "CONSULTATION_STARTED",
+        resource: `Ticket ${queue.ticketNumber}`,
+        resourceType: "queue",
+        metadata: { queueId: queue._id, doctorId: session.doctor._id },
+      });
+    } else if (
+      action === "complete-consultation" ||
+      action === "complete_consultation"
+    ) {
       queue.status = "completed";
       queue.completedTime = new Date();
       await queue.save();
+
+      if (queue.appointmentId) {
+        await Appointment.findByIdAndUpdate(queue.appointmentId, {
+          status: "completed",
+        });
+      }
+
+      await logAuditEvent({
+        actor: {
+          userId: session.user._id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role,
+        },
+        action: "QUEUE_CALL_COMPLETED",
+        resource: `Ticket ${queue.ticketNumber}`,
+        resourceType: "queue",
+        metadata: { queueId: queue._id, doctorId: session.doctor._id },
+      });
     } else {
       return NextResponse.json(
         { error: `Invalid queue action: ${action}` },
@@ -227,7 +274,7 @@ export async function PATCH(request: NextRequest) {
     console.error("Doctor queue update error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update queue item" },
-      { status: 500 }
+      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
     );
   }
 }

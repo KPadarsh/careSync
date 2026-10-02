@@ -43,11 +43,11 @@ export function CreateInvoiceView() {
     Array<{ serviceName: string; category: string; quantity: number; unitPrice: number; notes: string }>
   >([
     {
-      serviceName: "Specialist Physician Consultation",
+      serviceName: "",
       category: "consultation",
       quantity: 1,
-      unitPrice: 180,
-      notes: "Standard outpatient evaluation",
+      unitPrice: 0,
+      notes: "",
     },
   ]);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -183,50 +183,50 @@ export function CreateInvoiceView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <Link
           href="/billing/invoices"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeftIcon className="w-4 h-4" />
           <span>Back to Invoices</span>
         </Link>
 
-        <span className="text-xs text-blue-400 font-semibold">
+        <span className="text-xs text-blue-600 font-semibold">
           New Patient Accounts Statement
         </span>
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
           Create Patient Invoice
         </h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-slate-500">
           Bill professional consultations, procedures, lab panels, and pharmacy prescriptions.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-between">
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between">
           <span>{errorMsg}</span>
-          <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-white">✕</button>
+          <button onClick={() => setErrorMsg("")} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Patient and Physician Assignment */}
-        <div className="bg-[#0A1324] border border-slate-800/80 rounded-2xl p-6 space-y-4 shadow-sm">
-          <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Patient & Clinical Referral Reference
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-4 shadow-xs">
+          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Patient &amp; Clinical Referral Reference
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">
-                Select Patient <span className="text-blue-400">*</span>
+              <label className="block text-slate-700 font-semibold mb-1">
+                Select Patient <span className="text-blue-600">*</span>
               </label>
               <select
                 required
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 {patients.map((p) => (
                   <option key={p._id} value={p._id}>
@@ -237,13 +237,13 @@ export function CreateInvoiceView() {
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">
+              <label className="block text-slate-700 font-semibold mb-1">
                 Attending / Referring Physician
               </label>
               <select
                 value={selectedDoctorId}
                 onChange={(e) => setSelectedDoctorId(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
                 <option value="">None / General Billing</option>
                 {doctors.map((d) => (
@@ -255,30 +255,30 @@ export function CreateInvoiceView() {
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">
-                Payment Due Date <span className="text-blue-400">*</span>
+              <label className="block text-slate-700 font-semibold mb-1">
+                Payment Due Date <span className="text-blue-600">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
           </div>
         </div>
 
         {/* Billable Services Itemization */}
-        <div className="bg-[#0A1324] border border-slate-800/80 rounded-2xl p-6 space-y-4 shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Billable Clinical Services & Formulary
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Billable Clinical Services &amp; Formulary
             </h2>
             <button
               type="button"
               onClick={handleAddServiceLine}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs font-bold border border-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-colors"
             >
               <PlusIcon className="w-4 h-4" />
               <span>Add Line Item</span>
@@ -289,17 +289,17 @@ export function CreateInvoiceView() {
             {services.map((item, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3 text-xs"
+                className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-3 text-xs"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 flex-1">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-[10px]">
+                    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
                       {idx + 1}
                     </span>
-                    <span className="text-slate-400 text-[11px] font-medium">Quick Template:</span>
+                    <span className="text-slate-500 text-[11px] font-medium">Quick Template:</span>
                     <select
                       onChange={(e) => handleSelectPreset(idx, e.target.value)}
-                      className="p-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] focus:outline-none"
+                      className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-[11px] focus:outline-none"
                     >
                       <option value="">Choose standard clinical service...</option>
                       {PRESET_SERVICES.map((preset, pIdx) => (
@@ -314,7 +314,7 @@ export function CreateInvoiceView() {
                     <button
                       type="button"
                       onClick={() => handleRemoveServiceLine(idx)}
-                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
@@ -323,8 +323,8 @@ export function CreateInvoiceView() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
                   <div className="sm:col-span-3">
-                    <label className="block text-slate-400 font-medium mb-1">
-                      Service Description <span className="text-blue-400">*</span>
+                    <label className="block text-slate-600 font-medium mb-1">
+                      Service Description <span className="text-blue-600">*</span>
                     </label>
                     <input
                       type="text"
@@ -332,16 +332,16 @@ export function CreateInvoiceView() {
                       placeholder="Service title..."
                       value={item.serviceName}
                       onChange={(e) => handleServiceChange(idx, "serviceName", e.target.value)}
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                      className="w-full p-2 rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
 
                   <div className="sm:col-span-1">
-                    <label className="block text-slate-400 font-medium mb-1">Category</label>
+                    <label className="block text-slate-600 font-medium mb-1">Category</label>
                     <select
                       value={item.category}
                       onChange={(e) => handleServiceChange(idx, "category", e.target.value)}
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                      className="w-full p-2 rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="consultation">Consultation</option>
                       <option value="laboratory">Laboratory</option>
@@ -354,7 +354,7 @@ export function CreateInvoiceView() {
                   </div>
 
                   <div className="sm:col-span-1">
-                    <label className="block text-slate-400 font-medium mb-1">Qty</label>
+                    <label className="block text-slate-600 font-medium mb-1">Qty</label>
                     <input
                       type="number"
                       min="1"
@@ -363,12 +363,12 @@ export function CreateInvoiceView() {
                       onChange={(e) =>
                         handleServiceChange(idx, "quantity", Math.max(1, Number(e.target.value)))
                       }
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500 font-mono"
+                      className="w-full p-2 rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                     />
                   </div>
 
                   <div className="sm:col-span-1">
-                    <label className="block text-slate-400 font-medium mb-1">Unit Price ($)</label>
+                    <label className="block text-slate-600 font-medium mb-1">Unit Price ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -378,22 +378,22 @@ export function CreateInvoiceView() {
                       onChange={(e) =>
                         handleServiceChange(idx, "unitPrice", Math.max(0, Number(e.target.value)))
                       }
-                      className="w-full p-2 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-blue-500 font-mono"
+                      className="w-full p-2 rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-1 border-t border-slate-800/60">
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200">
                   <input
                     type="text"
                     placeholder="Optional item notes (e.g. CPT code, batch reference)..."
                     value={item.notes}
                     onChange={(e) => handleServiceChange(idx, "notes", e.target.value)}
-                    className="flex-1 mr-4 bg-transparent border-none text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none"
+                    className="flex-1 mr-4 bg-transparent border-none text-[11px] text-slate-600 placeholder-slate-400 focus:outline-none"
                   />
                   <div className="text-right shrink-0">
-                    <span className="text-[11px] text-slate-400 mr-2">Line Subtotal:</span>
-                    <span className="font-mono font-bold text-white text-xs">
+                    <span className="text-[11px] text-slate-500 mr-2">Line Subtotal:</span>
+                    <span className="font-mono font-bold text-slate-900 text-xs">
                       ${((item.quantity || 1) * (item.unitPrice || 0)).toFixed(2)}
                     </span>
                   </div>
@@ -404,10 +404,10 @@ export function CreateInvoiceView() {
         </div>
 
         {/* Totals & Adjustments Card */}
-        <div className="bg-[#0A1324] border border-slate-800/80 rounded-2xl p-6 space-y-4 shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-4 shadow-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <label className="block text-xs font-semibold text-slate-300">
+              <label className="block text-xs font-semibold text-slate-700">
                 Billing Statement Notes / Instructions
               </label>
               <textarea
@@ -415,50 +415,50 @@ export function CreateInvoiceView() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add payment terms, copay reconciliation notes, or insurance claim numbers..."
-                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
 
-            <div className="space-y-3 text-xs bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-              <div className="flex justify-between items-center text-slate-300">
+            <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div className="flex justify-between items-center text-slate-600">
                 <span>Services Subtotal:</span>
-                <span className="font-mono font-bold text-white">${subtotal.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-900">${subtotal.toFixed(2)}</span>
               </div>
 
-              <div className="flex justify-between items-center text-slate-300">
-                <label className="text-slate-300">Courtesy / Insurance Discount ($):</label>
+              <div className="flex justify-between items-center text-slate-600">
+                <label className="text-slate-600">Courtesy / Insurance Discount ($):</label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={discountAmount}
                   onChange={(e) => setDiscountAmount(Math.max(0, Number(e.target.value)))}
-                  className="w-24 p-1.5 rounded-lg bg-slate-950 border border-slate-700 text-right font-mono text-white focus:outline-none focus:border-blue-500"
+                  className="w-24 p-1.5 rounded-lg bg-white border border-slate-200 text-right font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
-                <span className="text-sm font-bold text-white uppercase tracking-wider">
+              <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-800 uppercase tracking-wider">
                   Total Amount Due:
                 </span>
-                <span className="font-mono text-xl font-extrabold text-blue-400">
+                <span className="font-mono text-xl font-extrabold text-blue-600">
                   ${total.toFixed(2)}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <Link
               href="/billing/invoices"
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs transition-colors"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-950/40 transition-all hover:scale-102"
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors disabled:opacity-50"
             >
               {submitting ? "Issuing Invoice..." : "Issue Patient Invoice"}
             </button>

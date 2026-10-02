@@ -242,7 +242,7 @@ export const TestDetailView: React.FC<TestDetailViewProps> = ({ id }) => {
         <div className="flex items-center gap-2.5">
           <span className="w-2 h-2 rounded-full bg-blue-600"></span>
           <span>
-            <strong>Technician Role Constraint:</strong> Result verification, pathology diagnostic interpretations, and final sign-off are reserved for Board Certified Pathologists (Dr. Sunita Patil, MD).
+            <strong>Technician Role Constraint:</strong> Result verification, pathology diagnostic interpretations, and final sign-off are reserved for Board Certified Pathologists.
           </span>
         </div>
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -429,7 +429,7 @@ export const TestDetailView: React.FC<TestDetailViewProps> = ({ id }) => {
 
           {isSubmittedOrCompleted && (
             <div className="p-2 rounded bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
-              ✓ Submitted for Pathologist Review (Awaiting Dr. Sunita Patil verification)
+              ✓ Submitted for Pathologist Review (Awaiting pathologist verification)
             </div>
           )}
         </div>

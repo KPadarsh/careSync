@@ -12,7 +12,13 @@ import {
   FollowUp,
   Visit,
   MedicalRecord,
+  Invoice,
+  Notification,
+  Appointment,
+  User,
 } from "@/models";
+import { NotificationService } from "@/services/notification.service";
+import { logAuditEvent } from "@/lib/audit";
 import mongoose from "mongoose";
 
 export async function GET(
@@ -212,8 +218,8 @@ export async function GET(
         mrn: populatedPatient?.mrn || "MRN-N/A",
         age,
         gender: populatedPatient?.gender || "male",
-        bloodGroup: populatedPatient?.bloodGroup || "O+",
-        allergies: populatedPatient?.allergies || ["Penicillin (Anaphylaxis Risk)"],
+        bloodGroup: populatedPatient?.bloodGroup || "—",
+        allergies: populatedPatient?.allergies || [],
         avatar: (populatedPatient as any)?.userId?.avatar,
       },
       queue: queueItem
@@ -227,29 +233,18 @@ export async function GET(
         : null,
       nurseVitals: nursingAssessment
         ? {
-            bloodPressure: nursingAssessment.vitals?.bloodPressure || "120/80",
-            heartRate: nursingAssessment.vitals?.heartRate || 72,
-            oxygenSaturation: nursingAssessment.vitals?.oxygenSaturation || 98,
-            temperature: nursingAssessment.vitals?.temperature || 98.6,
-            respiratoryRate: nursingAssessment.vitals?.respiratoryRate || 18,
-            weightKg: nursingAssessment.vitals?.weightKg || 74,
-            painScore: nursingAssessment.vitals?.painScore || 2,
-            notes: nursingAssessment.vitals?.notes || "Stable baseline vitals",
+            bloodPressure: nursingAssessment.vitals?.bloodPressure || "",
+            heartRate: nursingAssessment.vitals?.heartRate,
+            oxygenSaturation: nursingAssessment.vitals?.oxygenSaturation,
+            temperature: nursingAssessment.vitals?.temperature,
+            respiratoryRate: nursingAssessment.vitals?.respiratoryRate,
+            weightKg: nursingAssessment.vitals?.weightKg,
+            painScore: nursingAssessment.vitals?.painScore,
+            notes: nursingAssessment.vitals?.notes || "",
             nurseName: nursingAssessment.nurseName,
             handoffNotes: nursingAssessment.doctorHandoffNotes,
           }
-        : {
-            bloodPressure: "120/80",
-            heartRate: 72,
-            oxygenSaturation: 98,
-            temperature: 98.6,
-            respiratoryRate: 18,
-            weightKg: 74,
-            painScore: 2,
-            notes: "Normal vitals profile",
-            nurseName: "Arun Mary, RN",
-            handoffNotes: "Patient seated in Room 302.",
-          },
+        : null,
       chiefComplaint,
       historyOfPresentIllness,
       clinicalExamination,
@@ -264,9 +259,10 @@ export async function GET(
     });
   } catch (error: any) {
     console.error("Doctor consultation GET error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to load consultation encounter" },
-      { status: 500 }
+      { status }
     );
   }
 }
@@ -306,7 +302,7 @@ export async function POST(
       );
     }
 
-    const patient = await Patient.findById(patientId);
+    const patient = await Patient.findById(patientId).populate("userId");
     if (!patient) {
       return NextResponse.json(
         { error: "Patient not found" },
@@ -362,6 +358,7 @@ export async function POST(
     let createdPrescription: any = null;
     let createdLabReports: any[] = [];
     let createdFollowUp: any = null;
+    let createdInvoice: any = null;
 
     // If consultation is being COMPLETED, trigger integrated clinical pipeline:
     if (finalStatus === "completed") {
@@ -372,7 +369,7 @@ export async function POST(
           doctorId,
           visitId: undefined, // will update with visit
           date: new Date(),
-          status: "active",
+          status: "pending",
           medications: medications.map((m: any) => ({
             medicine: m.medicine,
             dosage: m.dosage,
@@ -452,14 +449,25 @@ export async function POST(
         isStaffOnly: false,
       });
 
-      // F. Update Queue status to "completed"
+      // F. Update Queue status to "completed" and mark Appointment completed
+      let associatedAppointmentId: any = null;
       if (queueId && mongoose.Types.ObjectId.isValid(queueId)) {
-        await Queue.findByIdAndUpdate(queueId, {
-          status: "completed",
-          completedTime: new Date(),
-        });
+        const queueDoc = await Queue.findByIdAndUpdate(
+          queueId,
+          {
+            status: "completed",
+            completedTime: new Date(),
+          },
+          { new: true }
+        );
+        if (queueDoc?.appointmentId) {
+          associatedAppointmentId = queueDoc.appointmentId;
+          await Appointment.findByIdAndUpdate(queueDoc.appointmentId, {
+            status: "completed",
+          });
+        }
       } else {
-        await Queue.findOneAndUpdate(
+        const queueDoc = await Queue.findOneAndUpdate(
           {
             patientId: patient._id,
             status: { $in: ["ready-for-doctor", "in-consultation"] },
@@ -467,9 +475,196 @@ export async function POST(
           {
             status: "completed",
             completedTime: new Date(),
-          }
+          },
+          { new: true }
+        );
+        if (queueDoc?.appointmentId) {
+          associatedAppointmentId = queueDoc.appointmentId;
+          await Appointment.findByIdAndUpdate(queueDoc.appointmentId, {
+            status: "completed",
+          });
+        }
+      }
+
+      if (!associatedAppointmentId) {
+        // Fallback: update today's active appointment for this patient/doctor if any
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+        await Appointment.findOneAndUpdate(
+          {
+            patientId: patient._id,
+            doctorId,
+            date: { $gte: todayStart, $lt: todayEnd },
+            status: { $in: ["checked-in", "in-progress", "confirmed"] },
+          },
+          { status: "completed" }
         );
       }
+
+      // G. Generate Billable Invoice for Billing Department
+      const patientUser = (patient as any)?.userId?.name || `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Patient";
+      const billableServices: any[] = [
+        {
+          serviceName: `Outpatient Specialist Consultation (${session.doctor.specialty || "Clinical Medicine"})`,
+          category: "consultation",
+          quantity: 1,
+          unitPrice: 150.0,
+          subtotal: 150.0,
+          notes: `Attending Physician: Dr. ${session.doctor.name}`,
+        },
+      ];
+
+      if (createdPrescription && medications && medications.length > 0) {
+        billableServices.push({
+          serviceName: `Pharmacy Formulary Dispensing (${medications.length} Rx Items)`,
+          category: "pharmacy",
+          quantity: 1,
+          unitPrice: 35.0 * medications.length,
+          subtotal: 35.0 * medications.length,
+          notes: `Prescribed: ${medications.map((m: any) => m.medicine).join(", ")}`,
+        });
+      }
+
+      if (createdLabReports && createdLabReports.length > 0) {
+        billableServices.push({
+          serviceName: `Clinical Pathology Diagnostic Panel (${createdLabReports.length} Tests)`,
+          category: "laboratory",
+          quantity: 1,
+          unitPrice: 65.0 * createdLabReports.length,
+          subtotal: 65.0 * createdLabReports.length,
+          notes: `Ordered: ${createdLabReports.map((l: any) => l.testName).join(", ")}`,
+        });
+      }
+
+      const subtotalAmount = billableServices.reduce((acc, s) => acc + s.subtotal, 0);
+      const invCount = await Invoice.countDocuments();
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invCount + 105).padStart(5, "0")}`;
+
+      createdInvoice = await Invoice.create({
+        invoiceNumber,
+        patientId: patient._id,
+        doctorId,
+        date: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        services: billableServices,
+        subtotalAmount,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: subtotalAmount,
+        paidAmount: 0,
+        balanceAmount: subtotalAmount,
+        status: "pending",
+        notes: `Generated on completion of consultation encounter with Dr. ${session.doctor.name}.`,
+        createdBy: session.user._id,
+        createdByName: `Dr. ${session.doctor.name}`,
+      });
+
+      // H. Cross-Portal Realtime Notifications Dispatch via NotificationService
+      // 1. Notify Pharmacy Staff if prescriptions exist
+      if (createdPrescription && medications && medications.length > 0) {
+        try {
+          await NotificationService.notifyRole("PHARMACIST", {
+            title: "New Prescription Authored",
+            message: `Dr. ${session.doctor.name} issued prescription for ${patientUser} (${medications.length} items).`,
+            type: "prescription",
+            link: "/pharmacy/prescriptions",
+            relatedResource: {
+              resourceType: "prescription",
+              resourceId: createdPrescription._id.toString(),
+            },
+          });
+        } catch (notifErr) {
+          console.error("Failed to notify pharmacy:", notifErr);
+        }
+      }
+
+      // 2. Notify Lab Technicians if lab orders exist
+      if (createdLabReports && createdLabReports.length > 0) {
+        try {
+          await NotificationService.notifyRole("LAB_TECHNICIAN", {
+            title: `New Lab Requisition (${createdLabReports.length} test${createdLabReports.length > 1 ? "s" : ""})`,
+            message: `Dr. ${session.doctor.name} ordered diagnostic testing for ${patientUser}. Requisition awaiting specimen collection.`,
+            type: "lab_report",
+            link: "/lab/requests",
+          });
+        } catch (notifErr) {
+          console.error("Failed to notify lab technicians:", notifErr);
+        }
+      }
+
+      // 3. Notify Billing Specialists of generated invoice
+      try {
+        await NotificationService.notifyRole("BILLING_STAFF", {
+          title: `New Billable Encounter (${invoiceNumber})`,
+          message: `Encounter completed for ${patientUser}. Total Billed: $${subtotalAmount.toFixed(2)}.`,
+          type: "billing",
+          link: "/billing/invoices",
+          relatedResource: {
+            resourceType: "invoice",
+            resourceId: createdInvoice._id.toString(),
+          },
+        });
+      } catch (notifErr) {
+        console.error("Failed to notify billing:", notifErr);
+      }
+
+      // 4. Notify Patient of completed consultation & new invoice
+      try {
+        if (patient.userId) {
+          const docName = session.doctor.name.startsWith("Dr.")
+            ? session.doctor.name
+            : `Dr. ${session.doctor.name}`;
+
+          await NotificationService.createNotification({
+            recipientUserId: patient.userId,
+            title: "Consultation Completed",
+            message: `Your consultation with ${docName} is complete. Treatment plan and clinical orders are ready.`,
+            type: "appointment",
+            link: "/patient/dashboard",
+            relatedResource: {
+              resourceType: "consultation",
+              resourceId: consultation._id.toString(),
+            },
+          });
+
+          await NotificationService.createNotification({
+            recipientUserId: patient.userId,
+            title: `New Invoice Available (${invoiceNumber})`,
+            message: `Invoice for $${subtotalAmount.toFixed(2)} has been issued for your consultation.`,
+            type: "billing",
+            link: "/patient/billing",
+            relatedResource: {
+              resourceType: "invoice",
+              resourceId: createdInvoice._id.toString(),
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to notify patient:", notifErr);
+      }
+
+      // I. Record Server-Side Audit Log
+      await logAuditEvent({
+        actor: {
+          userId: session.user._id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role,
+        },
+        action: "CONSULTATION_FINALIZED",
+        resource: `Consultation Encounter for Patient ${patient.mrn} by Dr. ${session.doctor.name}`,
+        resourceType: "consultation",
+        metadata: {
+          consultationId: consultation._id,
+          patientId: patient._id,
+          prescriptionId: createdPrescription?._id,
+          labReportsCount: createdLabReports.length,
+          invoiceId: createdInvoice._id,
+          invoiceNumber: createdInvoice.invoiceNumber,
+          totalAmount: subtotalAmount,
+        },
+      });
     }
 
     return NextResponse.json({
@@ -481,14 +676,17 @@ export async function POST(
       consultationId: consultation._id.toString(),
       status: consultation.status,
       prescriptionId: createdPrescription?._id?.toString() || null,
+      invoiceId: createdInvoice?._id?.toString() || null,
+      invoiceNumber: createdInvoice?.invoiceNumber || null,
       labOrdersCreated: createdLabReports.length,
       followUpId: createdFollowUp?._id?.toString() || null,
     });
   } catch (error: any) {
     console.error("Doctor consultation POST error:", error);
+    const status = error?.statusCode || (error.message?.includes("Forbidden") ? 403 : error.message?.includes("Unauthorized") ? 401 : 500);
     return NextResponse.json(
       { error: error.message || "Failed to process consultation" },
-      { status: 500 }
+      { status }
     );
   }
 }
