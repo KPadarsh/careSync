@@ -30,6 +30,8 @@ interface LabOrderItem {
   reason: string;
   priority: "routine" | "urgent" | "stat";
   instructions?: string;
+  dispatched?: boolean;
+  labReportId?: string;
 }
 
 interface ActiveConsultationProps {
@@ -41,6 +43,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dispatchingLabs, setDispatchingLabs] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
   const [addMedicineModalOpen, setAddMedicineModalOpen] = useState(false);
@@ -260,17 +263,104 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
     setLabOrders(labOrders.filter((_, i) => i !== idx));
   };
 
-  const handleAddLabOrder = (e: React.FormEvent) => {
+  const handleAddLabOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newLab.testName.trim()) {
-      setLabOrders([...labOrders, { ...newLab }]);
-      setNewLab({
-        testName: "",
-        reason: "",
-        priority: "routine",
-        instructions: "",
-      });
-      setAddLabModalOpen(false);
+    if (!newLab.testName.trim()) return;
+
+    const orderToQueue: LabOrderItem = {
+      ...newLab,
+      testName: newLab.testName.trim(),
+      dispatched: false,
+    };
+
+    setAddLabModalOpen(false);
+    setNewLab({
+      testName: "",
+      reason: "",
+      priority: "routine",
+      instructions: "",
+    });
+
+    if (patient?._id) {
+      try {
+        const res = await fetch("/api/doctor/lab", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patientId: patient._id,
+            testName: orderToQueue.testName,
+            department: "Pathology / Clinical Chemistry",
+            priority: orderToQueue.priority,
+            clinicalReason: orderToQueue.reason || "Diagnostic evaluation",
+            instructions: orderToQueue.instructions,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          orderToQueue.dispatched = true;
+          orderToQueue.labReportId = data.labReport?._id;
+          setLabOrders((prev) => [...prev, orderToQueue]);
+          showToast(`Diagnostic order "${orderToQueue.testName}" dispatched directly to Lab Technician.`);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to auto-dispatch lab order:", err);
+      }
+    }
+
+    setLabOrders((prev) => [...prev, orderToQueue]);
+    showToast(`Order "${orderToQueue.testName}" queued in consultation.`);
+  };
+
+  const handleDispatchPendingLabOrders = async () => {
+    if (!patient?._id || labOrders.length === 0) return;
+    const pendingOrders = labOrders.filter((o) => !o.dispatched && !o.labReportId);
+    if (pendingOrders.length === 0) {
+      showToast("All lab orders are already dispatched.");
+      return;
+    }
+
+    setDispatchingLabs(true);
+    let successCount = 0;
+    const updatedOrders = [...labOrders];
+
+    for (let i = 0; i < updatedOrders.length; i++) {
+      const order = updatedOrders[i];
+      if (!order.dispatched && !order.labReportId) {
+        try {
+          const res = await fetch("/api/doctor/lab", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              patientId: patient._id,
+              testName: order.testName,
+              department: "Pathology / Clinical Chemistry",
+              priority: order.priority,
+              clinicalReason: order.reason || "Diagnostic evaluation",
+              instructions: order.instructions,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            updatedOrders[i] = {
+              ...order,
+              dispatched: true,
+              labReportId: data.labReport?._id,
+            };
+            successCount++;
+          }
+        } catch (err) {
+          console.error("Failed to dispatch order:", err);
+        }
+      }
+    }
+
+    setLabOrders(updatedOrders);
+    setDispatchingLabs(false);
+    if (successCount > 0) {
+      showToast(`Successfully dispatched ${successCount} order(s) to Lab Technician queue.`);
+    } else {
+      showToast("Failed to dispatch lab orders. Please try again.");
     }
   };
 
@@ -756,7 +846,7 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                     className="p-3 bg-slate-50/80 rounded-xl flex items-start justify-between gap-2 border border-slate-200/80"
                   >
                     <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs sm:text-[13px] font-semibold text-slate-900">
                           {order.testName}
                         </span>
@@ -767,6 +857,16 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
                         ) : (
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-white text-slate-600 border border-slate-200">
                             Routine
+                          </span>
+                        )}
+                        {order.dispatched || order.labReportId ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Dispatched to Lab
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                            Pending Dispatch
                           </span>
                         )}
                       </div>
@@ -786,9 +886,21 @@ export const ActiveConsultationView: React.FC<ActiveConsultationProps> = ({ id }
               )}
             </div>
 
-            <p className="text-[11px] text-slate-400 italic">
-              Dispatches directly to Lab Technician queue.
-            </p>
+            {labOrders.some((o) => !o.dispatched && !o.labReportId) && (
+              <button
+                type="button"
+                onClick={handleDispatchPendingLabOrders}
+                disabled={dispatchingLabs}
+                className="w-full py-2 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
+                <span>
+                  {dispatchingLabs
+                    ? "Dispatching to Lab Queue..."
+                    : `⚡ Dispatch ${labOrders.filter((o) => !o.dispatched && !o.labReportId).length} Pending Orders to Lab Now`}
+                </span>
+              </button>
+            )}
 
             <button
               type="button"

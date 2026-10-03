@@ -360,6 +360,51 @@ export async function POST(
     let createdFollowUp: any = null;
     let createdInvoice: any = null;
 
+    // Auto-create/dispatch lab orders for Lab Technician during draft saves as well
+    if (finalStatus !== "completed" && labOrders && labOrders.length > 0) {
+      for (const order of labOrders) {
+        if (!order?.testName?.trim()) continue;
+        let lab = null;
+        if (order.labReportId && mongoose.Types.ObjectId.isValid(order.labReportId)) {
+          lab = await LabReport.findById(order.labReportId);
+        }
+        if (!lab) {
+          lab = await LabReport.findOne({
+            patientId: patient._id,
+            testName: order.testName.trim(),
+            status: "pending",
+            createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+          });
+        }
+        if (!lab) {
+          lab = await LabReport.create({
+            patientId: patient._id,
+            doctorId,
+            testName: order.testName.trim(),
+            department: "Pathology / Clinical Chemistry",
+            sampleCollectionDate: new Date(),
+            status: "pending",
+            summary: `Clinical Order: ${order.reason || "Diagnostic evaluation"}. Priority: ${order.priority || "routine"}.`,
+            verifiedBy: "Pending Lab Processing",
+            results: [],
+          });
+          try {
+            const patientNameStr = `${(patient as any).firstName || ""} ${(patient as any).lastName || ""}`.trim() || "Patient";
+            await NotificationService.notifyRole("LAB_TECHNICIAN", {
+              title: `New Lab Requisition: ${order.testName.trim()}`,
+              message: `Dr. ${session.doctor.name} ordered diagnostic test ${order.testName.trim()} (${order.priority || "routine"}) for ${patientNameStr}.`,
+              type: "lab_report",
+              link: "/lab/requests",
+              relatedResource: {
+                resourceType: "lab_report",
+                resourceId: lab._id.toString(),
+              },
+            });
+          } catch {}
+        }
+      }
+    }
+
     // If consultation is being COMPLETED, trigger integrated clinical pipeline:
     if (finalStatus === "completed") {
       // A. Create / Save Prescription for Pharmacy
@@ -382,21 +427,38 @@ export async function POST(
         });
       }
 
-      // B. Create Lab Requests for Lab Technician
+      // B. Create Lab Requests for Lab Technician (with deduplication)
       if (labOrders && labOrders.length > 0) {
         for (const order of labOrders) {
-          const lab = await LabReport.create({
-            patientId: patient._id,
-            doctorId,
-            testName: order.testName,
-            department: "Pathology / Clinical Chemistry",
-            sampleCollectionDate: new Date(),
-            status: "pending", // Lab technician collects and processes
-            summary: `Clinical Order: ${order.reason || "Diagnostic evaluation"}. Priority: ${order.priority || "routine"}.`,
-            verifiedBy: "Pending Lab Processing",
-            results: [],
-          });
-          createdLabReports.push(lab);
+          if (!order?.testName?.trim()) continue;
+          let lab = null;
+          if (order.labReportId && mongoose.Types.ObjectId.isValid(order.labReportId)) {
+            lab = await LabReport.findById(order.labReportId);
+          }
+          if (!lab) {
+            lab = await LabReport.findOne({
+              patientId: patient._id,
+              testName: order.testName.trim(),
+              status: "pending",
+              createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+            });
+          }
+          if (!lab) {
+            lab = await LabReport.create({
+              patientId: patient._id,
+              doctorId,
+              testName: order.testName.trim(),
+              department: "Pathology / Clinical Chemistry",
+              sampleCollectionDate: new Date(),
+              status: "pending", // Lab technician collects and processes
+              summary: `Clinical Order: ${order.reason || "Diagnostic evaluation"}. Priority: ${order.priority || "routine"}.`,
+              verifiedBy: "Pending Lab Processing",
+              results: [],
+            });
+          }
+          if (lab) {
+            createdLabReports.push(lab);
+          }
         }
       }
 

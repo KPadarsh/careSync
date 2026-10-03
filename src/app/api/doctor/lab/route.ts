@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requireDoctorSession } from "@/lib/auth";
 import { LabReport, Patient, Doctor } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
@@ -162,6 +163,23 @@ export async function POST(request: NextRequest) {
       verifiedBy: "Pending Lab Processing",
       results: [],
     });
+
+    // Notify all Lab Technicians immediately
+    try {
+      const patientFullName = `${(patient as any).firstName || ""} ${(patient as any).lastName || ""}`.trim() || "Patient";
+      await NotificationService.notifyRole("LAB_TECHNICIAN", {
+        title: `New Lab Requisition: ${testName.trim()}`,
+        message: `Dr. ${session.doctor.name} ordered ${testName.trim()} (${priority || "routine"}) for ${patientFullName}.`,
+        type: "lab_report",
+        link: "/lab/requests",
+        relatedResource: {
+          resourceType: "lab_report",
+          resourceId: labOrder._id.toString(),
+        },
+      });
+    } catch (notifErr) {
+      console.warn("Lab notification dispatch warning:", notifErr);
+    }
 
     return NextResponse.json({
       success: true,
