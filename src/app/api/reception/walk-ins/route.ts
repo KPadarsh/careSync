@@ -130,9 +130,13 @@ export async function POST(req: NextRequest) {
 
     // Notify nurse triage station via NotificationService
     try {
+      const patientDisplayName =
+        (patientRecord.userId as unknown as { name?: string })?.name ||
+        patientRecord.firstName ||
+        "Walk-in Patient";
       await NotificationService.notifyRole("NURSE", {
-        title: "New Patient Ready",
-        message: "A checked-in patient is ready for nursing assessment.",
+        title: `New Patient Ready (${queue.ticketNumber})`,
+        message: `${patientDisplayName} (${queue.ticketNumber}) has checked in and is waiting for nursing triage.`,
         type: "queue",
         link: "/nurse/queue",
         relatedResource: {

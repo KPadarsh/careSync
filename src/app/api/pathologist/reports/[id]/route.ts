@@ -96,10 +96,10 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED_PATHOLOGIST") {
+    if (error.message === "UNAUTHORIZED_PATHOLOGIST" || error.statusCode === 401 || error.statusCode === 403) {
       return NextResponse.json(
-        { error: "Unauthorized: Pathologist access required." },
-        { status: 403 }
+        { error: error.message || "Pathologist access required." },
+        { status: error.statusCode || (error.message === "UNAUTHORIZED_PATHOLOGIST" ? 401 : 403) }
       );
     }
     console.error("Pathologist report detail error:", error);
@@ -313,10 +313,10 @@ export async function POST(
 
     return NextResponse.json({ error: "Invalid action specified." }, { status: 400 });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED_PATHOLOGIST") {
+    if (error.message === "UNAUTHORIZED_PATHOLOGIST" || error.statusCode === 401 || error.statusCode === 403) {
       return NextResponse.json(
-        { error: "Unauthorized: Pathologist access required." },
-        { status: 403 }
+        { error: error.message || "Pathologist access required." },
+        { status: error.statusCode || (error.message === "UNAUTHORIZED_PATHOLOGIST" ? 401 : 403) }
       );
     }
     console.error("Pathologist report review POST error:", error);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Queue, Patient, Doctor, Appointment, NursingAssessment } from "@/models";
 
 export async function GET(request: Request) {
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     console.error("Nurse queue GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load queue" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -150,7 +150,7 @@ export async function PATCH(request: Request) {
     console.error("Nurse queue PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update queue" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

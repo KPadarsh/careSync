@@ -142,7 +142,7 @@ export async function GET(
     console.error("Lab Test Detail GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load test details" },
-      { status: 500 }
+      { status: error.statusCode || (error.message?.includes("UNAUTHORIZED") ? 401 : error.message?.includes("Forbidden") ? 403 : 500) }
     );
   }
 }
@@ -272,7 +272,7 @@ export async function PATCH(
     console.error("Lab Test Workbench PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to save test results" },
-      { status: 500 }
+      { status: error.statusCode || (error.message?.includes("UNAUTHORIZED") ? 401 : error.message?.includes("Forbidden") ? 403 : 500) }
     );
   }
 }

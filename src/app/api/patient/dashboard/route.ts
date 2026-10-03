@@ -114,13 +114,21 @@ export async function GET() {
     const primDoc = primaryDoctor as unknown as PopulatedDoctor | undefined;
 
     // Outstanding bills from database
-    const outstandingInvoices = await Invoice.find({
-      patientId,
-      status: { $in: ["pending", "partially_paid", "overdue"] },
+    const outstandingInvoices: any[] = await Invoice.find({
+      patientId: patientId as any,
+      status: {
+        $in: [
+          "pending",
+          "partially_paid",
+          "overdue",
+          "UNPAID",
+          "PARTIALLY_PAID",
+        ],
+      },
       balanceAmount: { $gt: 0 },
     });
     const totalOutstanding = outstandingInvoices.reduce(
-      (sum, inv) => sum + (inv.balanceAmount || 0),
+      (sum: number, inv: any) => sum + (inv.balanceAmount || 0),
       0
     );
 

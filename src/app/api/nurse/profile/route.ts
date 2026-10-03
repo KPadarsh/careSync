@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { requireNurseSession, hashPassword, verifyPassword, getAuthStatusCode } from "@/lib/auth";
 import { User } from "@/models";
 
 export async function GET() {
@@ -26,7 +26,7 @@ export async function GET() {
     console.error("Nurse profile GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load profile" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -73,7 +73,7 @@ export async function PATCH(request: Request) {
     console.error("Nurse profile PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update profile" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

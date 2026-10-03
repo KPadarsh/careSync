@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
     console.error("Billing dashboard GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load billing dashboard" },
-      { status: error.message === "UNAUTHORIZED_BILLING" ? 401 : 500 }
+      { status: error.statusCode || (error.message === "UNAUTHORIZED_BILLING" ? 401 : 500) }
     );
   }
 }

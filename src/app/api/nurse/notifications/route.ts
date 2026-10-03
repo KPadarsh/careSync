@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Notification } from "@/models";
 
 export async function GET() {
@@ -22,7 +22,7 @@ export async function GET() {
     console.error("Nurse notifications GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load notifications" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -56,7 +56,7 @@ export async function PATCH(request: Request) {
     console.error("Nurse notifications PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update notification" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

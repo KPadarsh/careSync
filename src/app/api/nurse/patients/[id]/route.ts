@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Patient, Queue, NursingAssessment, Appointment, Visit, Doctor } from "@/models";
 import mongoose from "mongoose";
 
@@ -82,7 +82,7 @@ export async function GET(
     console.error("Nurse patient overview GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load patient overview" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

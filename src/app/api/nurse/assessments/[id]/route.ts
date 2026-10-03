@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Patient, Queue, NursingAssessment, Doctor, Notification } from "@/models";
 import { NotificationService } from "@/services/notification.service";
 import { logAuditEvent } from "@/lib/audit";
@@ -68,7 +68,7 @@ export async function GET(
     console.error("Nurse assessment GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load assessment" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -277,7 +277,7 @@ export async function POST(
     console.error("Nurse assessment POST error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to save assessment" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

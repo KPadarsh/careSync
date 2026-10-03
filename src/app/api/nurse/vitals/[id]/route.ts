@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Patient, Queue, NursingAssessment } from "@/models";
 import mongoose from "mongoose";
 
@@ -62,7 +62,7 @@ export async function GET(
     console.error("Nurse vitals GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load vitals" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -184,7 +184,7 @@ export async function POST(
     console.error("Nurse vitals POST error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to record vitals" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

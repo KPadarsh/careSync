@@ -287,6 +287,32 @@ export class AuthError extends Error {
   }
 }
 
+export function getAuthStatusCode(error: any): number {
+  if (error?.statusCode && typeof error.statusCode === "number") {
+    return error.statusCode;
+  }
+  if (error?.status && typeof error.status === "number") {
+    return error.status;
+  }
+  const msg = (error?.message || "").toUpperCase();
+  if (
+    msg.includes("UNAUTHORIZED") ||
+    msg.includes("AUTHENTICATION REQUIRED") ||
+    msg.includes("UNAUTHENTICATED")
+  ) {
+    return 401;
+  }
+  if (
+    msg.includes("FORBIDDEN") ||
+    msg.includes("ACCESS RESTRICTED") ||
+    msg.includes("ACCESS REQUIRED") ||
+    msg.includes("PERMISSION DENIED")
+  ) {
+    return 403;
+  }
+  return 500;
+}
+
 export function normalizeRole(role?: string | null): string | null {
   if (!role) return null;
   const r = role.toUpperCase().trim();
@@ -314,7 +340,7 @@ export async function requirePatientSession(req?: any): Promise<{
   const session = await getSession(req);
 
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_PATIENT", 401);
   }
 
   const role = normalizeRole(session.role);
@@ -359,7 +385,7 @@ export async function requireReceptionSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_RECEPTION", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "RECEPTIONIST") {
@@ -394,7 +420,7 @@ export async function requireNurseSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_NURSE", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "NURSE") {
@@ -449,7 +475,7 @@ export async function requireDoctorSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_DOCTOR", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "DOCTOR") {
@@ -489,7 +515,7 @@ export async function requireLabSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_LAB", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "LAB_TECHNICIAN") {
@@ -524,7 +550,7 @@ export async function requirePathologistSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_PATHOLOGIST", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "PATHOLOGIST") {
@@ -559,7 +585,7 @@ export async function requirePharmacySession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_PHARMACY", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "PHARMACIST") {
@@ -594,7 +620,7 @@ export async function requireBillingSession(): Promise<{
 }> {
   const session = await getSession();
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_BILLING", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "BILLING_STAFF") {
@@ -629,7 +655,7 @@ export async function requireAdminSession(req?: any): Promise<{
 }> {
   const session = await getSession(req);
   if (!session) {
-    throw new AuthError("Unauthorized: Authentication required", 401);
+    throw new AuthError("UNAUTHORIZED_ADMIN", 401);
   }
   const r = normalizeRole(session.role);
   if (r !== "ADMIN") {

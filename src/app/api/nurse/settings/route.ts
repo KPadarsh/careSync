@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 
 // Workstation memory settings (in a production setting these could be stored in a Settings model or user metadata)
 let nurseWorkstationSettings = {
@@ -33,7 +33,7 @@ export async function GET() {
     console.error("Nurse settings GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load settings" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -61,7 +61,7 @@ export async function PATCH(request: Request) {
     console.error("Nurse settings PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update settings" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

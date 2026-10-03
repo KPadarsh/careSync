@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { NurseTask, Patient } from "@/models";
 
 export async function GET(request: Request) {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     console.error("Nurse tasks GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load tasks" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     console.error("Nurse task POST error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create task" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
@@ -111,7 +111,7 @@ export async function PATCH(request: Request) {
     console.error("Nurse task PATCH error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update task" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }

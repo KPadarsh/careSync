@@ -435,27 +435,37 @@ export function assertPatientOwnership(
 
 // 12. Standard API Error Response Handler
 export function handleAuthError(error: unknown, fallbackMessage = "Internal server error"): NextResponse {
-  if (error instanceof AuthError) {
+  const err = error as any;
+  if (err?.statusCode && typeof err.statusCode === "number") {
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: error.statusCode }
+      { success: false, error: err.message || fallbackMessage },
+      { status: err.statusCode }
+    );
+  }
+
+  if (error instanceof AuthError || err?.name === "AuthError") {
+    return NextResponse.json(
+      { success: false, error: err?.message || fallbackMessage },
+      { status: err?.statusCode || 401 }
     );
   }
 
   const message = error instanceof Error ? error.message : fallbackMessage;
+  const upper = (message || "").toUpperCase();
 
   if (
-    message.includes("UNAUTHORIZED") ||
-    message.includes("Authentication required") ||
-    message === "UNAUTHENTICATED"
+    upper.includes("UNAUTHORIZED") ||
+    upper.includes("AUTHENTICATION REQUIRED") ||
+    upper.includes("UNAUTHENTICATED")
   ) {
     return NextResponse.json({ success: false, error: message }, { status: 401 });
   }
 
   if (
-    message.includes("Forbidden") ||
-    message.includes("FORBIDDEN") ||
-    message.includes("Permission Denied")
+    upper.includes("FORBIDDEN") ||
+    upper.includes("PERMISSION DENIED") ||
+    upper.includes("ACCESS RESTRICTED") ||
+    upper.includes("ACCESS REQUIRED")
   ) {
     return NextResponse.json({ success: false, error: message }, { status: 403 });
   }

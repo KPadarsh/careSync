@@ -23,7 +23,8 @@ export async function GET() {
 
     // Calculate totals
     const totalOutstanding = rawInvoices.reduce((sum, inv) => {
-      if (inv.status !== "paid" && inv.status !== "cancelled") {
+      const st = (inv.status || "").toUpperCase();
+      if (st !== "PAID" && st !== "CANCELLED") {
         return sum + (inv.balanceAmount || 0);
       }
       return sum;
@@ -36,32 +37,37 @@ export async function GET() {
       return sum;
     }, 0);
 
-    const invoices = rawInvoices.map((inv: any) => ({
-      id: inv.invoiceNumber,
-      invoiceDbId: inv._id.toString(),
-      service:
-        inv.services?.map((s: any) => s.serviceName).join(", ") ||
-        "General Medical Services",
-      provider: inv.doctorId?.name || "Attending Physician",
-      date: new Date(inv.date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      rawDate: inv.date,
-      totalBilled: `$${(inv.totalAmount || 0).toFixed(2)}`,
-      insuranceCovered: `$${(inv.discountAmount || 0).toFixed(2)}`,
-      patientOwing: `$${(inv.balanceAmount || 0).toFixed(2)}`,
-      status:
-        inv.status === "paid"
+    const invoices = rawInvoices.map((inv: any) => {
+      const st = (inv.status || "").toUpperCase();
+      const displayStatus =
+        st === "PAID"
           ? "Paid"
-          : inv.status === "pending" || inv.status === "partially_paid" || inv.status === "overdue"
+          : st === "UNPAID" || st === "PENDING" || st === "PARTIALLY_PAID" || st === "OVERDUE"
           ? "Unpaid"
-          : inv.status,
-      rawStatus: inv.status,
-      totalAmountNum: inv.totalAmount || 0,
-      balanceAmountNum: inv.balanceAmount || 0,
-    }));
+          : inv.status;
+
+      return {
+        id: inv.invoiceNumber,
+        invoiceDbId: inv._id.toString(),
+        service:
+          inv.services?.map((s: any) => s.serviceName).join(", ") ||
+          "General Medical Services",
+        provider: inv.doctorId?.name || "Attending Physician",
+        date: new Date(inv.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        rawDate: inv.date,
+        totalBilled: `$${(inv.totalAmount || 0).toFixed(2)}`,
+        insuranceCovered: `$${(inv.discountAmount || 0).toFixed(2)}`,
+        patientOwing: `$${(inv.balanceAmount || 0).toFixed(2)}`,
+        status: displayStatus,
+        rawStatus: inv.status,
+        totalAmountNum: inv.totalAmount || 0,
+        balanceAmountNum: inv.balanceAmount || 0,
+      };
+    });
 
     const payments = rawPayments.map((p: any) => ({
       id: p.transactionNumber,
@@ -107,9 +113,17 @@ export async function POST(req: NextRequest) {
 
     if (payFullBalance) {
       // Find all unpaid invoices
-      const unpaidInvoices = await Invoice.find({
-        patientId,
-        status: { $in: ["pending", "partially_paid", "overdue"] },
+      const unpaidInvoices: any[] = await Invoice.find({
+        patientId: patientId as any,
+        status: {
+          $in: [
+            "pending",
+            "partially_paid",
+            "overdue",
+            "UNPAID",
+            "PARTIALLY_PAID",
+          ],
+        },
         balanceAmount: { $gt: 0 },
       });
 
@@ -208,7 +222,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (invoice.balanceAmount <= 0 || invoice.status === "paid") {
+    if (invoice.balanceAmount <= 0 || invoice.status === "paid" || invoice.status === "PAID") {
       return NextResponse.json(
         { error: "This invoice is already fully paid." },
         { status: 400 }

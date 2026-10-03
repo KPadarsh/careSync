@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     console.error("Billing invoices GET error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to fetch invoices" },
-      { status: error.message === "UNAUTHORIZED_BILLING" ? 401 : 500 }
+      { status: error.statusCode || (error.message === "UNAUTHORIZED_BILLING" ? 401 : 500) }
     );
   }
 }
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
     console.error("Billing invoice POST error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create invoice" },
-      { status: error.message === "UNAUTHORIZED_BILLING" ? 401 : 500 }
+      { status: error.statusCode || (error.message === "UNAUTHORIZED_BILLING" ? 401 : 500) }
     );
   }
 }

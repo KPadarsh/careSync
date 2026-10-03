@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
-import { requireNurseSession } from "@/lib/auth";
+import { requireNurseSession, getAuthStatusCode } from "@/lib/auth";
 import { Queue, Patient, Doctor, Appointment, NursingAssessment, NurseTask } from "@/models";
 
 export async function GET() {
@@ -111,7 +111,7 @@ export async function GET() {
     console.error("Nurse dashboard API error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to load nurse dashboard data" },
-      { status: error.message?.includes("UNAUTHORIZED") ? 401 : 500 }
+      { status: getAuthStatusCode(error) }
     );
   }
 }
