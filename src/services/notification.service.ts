@@ -52,6 +52,10 @@ export class NotificationService {
       }
 
       // 2. Fallback to standalone Socket.IO server via internal HTTP webhook
+      if (process.env.VERCEL && !process.env.INTERNAL_SOCKET_URL && !process.env.NEXT_PUBLIC_SOCKET_URL) {
+        return;
+      }
+
       const res = await fetch(`${SOCKET_SERVER_URL}/api/realtime/broadcast`, {
         method: "POST",
         headers: {

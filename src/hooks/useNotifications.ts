@@ -64,7 +64,7 @@ export function useNotifications() {
     }
   }, []);
 
-  // 2. Setup Socket.IO listener and reconnect behavior
+  // 2. Setup Socket.IO listener and smart fallback polling
   useEffect(() => {
     // Initial fetch from MongoDB
     syncWithApi();
@@ -110,20 +110,45 @@ export function useNotifications() {
       setUnreadCount((prev) => prev + 1);
     };
 
-    if (socket.connected) {
-      setIsConnected(true);
+    if (socket) {
+      if (socket.connected) {
+        setIsConnected(true);
+      }
+
+      socket.on("connect", handleConnect);
+      socket.on("disconnect", handleDisconnect);
+      socket.on("notification:new", handleNewNotification);
     }
 
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("notification:new", handleNewNotification);
+    // Smart Polling Fallback:
+    // If WebSockets are unavailable or disconnected (e.g. cloud serverless deployments like Vercel),
+    // automatically poll every 5 seconds to ensure live cross-portal delivery without user refresh.
+    // If connected via WebSockets, poll every 30 seconds as background freshness synchronization.
+    const pollIntervalMs = isConnected ? 30000 : 5000;
+    const intervalId = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        syncWithApi();
+      }
+    }, pollIntervalMs);
+
+    // Immediate sync when returning to active browser tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncWithApi();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("notification:new", handleNewNotification);
+      if (socket) {
+        socket.off("connect", handleConnect);
+        socket.off("disconnect", handleDisconnect);
+        socket.off("notification:new", handleNewNotification);
+      }
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [syncWithApi]);
+  }, [syncWithApi, isConnected]);
 
   // 3. Mark single notification as read
   const markAsRead = useCallback(async (id: string) => {

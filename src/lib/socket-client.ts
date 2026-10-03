@@ -1,26 +1,32 @@
 import { io, Socket } from "socket.io-client";
 
 let socketInstance: Socket | null = null;
+let hasLoggedFailure = false;
 
-function resolveSocketUrl(): string {
+export function resolveSocketUrl(): string | null {
   if (process.env.NEXT_PUBLIC_SOCKET_URL) {
     return process.env.NEXT_PUBLIC_SOCKET_URL;
   }
 
   if (typeof window !== "undefined") {
     const { protocol, hostname } = window.location;
-    // Default standalone realtime server port is 3001
-    return `${protocol}//${hostname}:3001`;
+    // Only default to port 3001 if we are explicitly running locally on localhost / 127.0.0.1
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `${protocol}//${hostname}:3001`;
+    }
+    // When deployed to production (e.g. Vercel) without a dedicated external NEXT_PUBLIC_SOCKET_URL,
+    // do NOT attempt connecting to :3001 as cloud platforms do not expose arbitrary ports.
+    return null;
   }
 
-  return "http://localhost:3001";
+  return null;
 }
 
 /**
- * Returns a shared, singleton Socket.IO client instance.
+ * Returns a shared, singleton Socket.IO client instance, or null if no realtime server is configured.
  * Reuses the existing connection to prevent multiple connections per browser session.
  */
-export function getSocket(): Socket {
+export function getSocket(): Socket | null {
   if (socketInstance) {
     if (!socketInstance.connected && !socketInstance.active) {
       socketInstance.connect();
@@ -29,30 +35,45 @@ export function getSocket(): Socket {
   }
 
   const url = resolveSocketUrl();
+  if (!url) {
+    return null;
+  }
 
-  socketInstance = io(url, {
-    withCredentials: true, // Automatically includes HttpOnly caresync_session cookie
-    autoConnect: true,
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    transports: ["websocket", "polling"],
-  });
+  try {
+    socketInstance = io(url, {
+      withCredentials: true, // Automatically includes HttpOnly caresync_session cookie
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 5000,
+      transports: ["websocket", "polling"],
+    });
 
-  socketInstance.on("connect", () => {
-    console.log("[CareSync Socket] Connected to realtime server with id:", socketInstance?.id);
-  });
+    socketInstance.on("connect", () => {
+      hasLoggedFailure = false;
+      console.log("[CareSync Socket] Connected to realtime server with id:", socketInstance?.id);
+    });
 
-  socketInstance.on("connect_error", (error) => {
-    console.warn("[CareSync Socket] Connection error:", error.message);
-  });
+    socketInstance.on("connect_error", (error) => {
+      if (!hasLoggedFailure) {
+        console.warn("[CareSync Socket] Realtime server unavailable, using live polling fallback:", error.message);
+        hasLoggedFailure = true;
+      }
+    });
 
-  socketInstance.on("disconnect", (reason) => {
-    console.log("[CareSync Socket] Disconnected:", reason);
-  });
+    socketInstance.on("disconnect", (reason) => {
+      if (reason === "io server disconnect") {
+        socketInstance?.connect();
+      }
+    });
 
-  return socketInstance;
+    return socketInstance;
+  } catch (err) {
+    console.warn("[CareSync Socket] Failed to initialize socket connection:", err);
+    return null;
+  }
 }
 
 /**
@@ -65,3 +86,4 @@ export function disconnectSocket(): void {
     socketInstance = null;
   }
 }
+
