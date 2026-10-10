@@ -65,18 +65,18 @@ const defaultStats: PatientStatItem[] = [
   },
 ];
 
-const badgeStyles: Record<string, { bg: string; text: string }> = {
-  info: { bg: "bg-[#3b82f6]/10", text: "text-[#3b82f6]" },
-  success: { bg: "bg-[#22c55e]/10", text: "text-[#22c55e]" },
-  warning: { bg: "bg-[#f59e0b]/10", text: "text-[#f59e0b]" },
-  error: { bg: "bg-[#ef4444]/10", text: "text-[#ef4444]" },
+const badgeStyles: Record<string, { bg: string; text: string; border: string }> = {
+  info: { bg: "bg-sky-50", text: "text-sky-800", border: "border-sky-200" },
+  success: { bg: "bg-emerald-50", text: "text-emerald-800", border: "border-emerald-200" },
+  warning: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-200" },
+  error: { bg: "bg-rose-50", text: "text-rose-800", border: "border-rose-200" },
 };
 
 export function PatientStats({ stats = defaultStats }: { stats?: PatientStatItem[] }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {stats.map((item) => {
-        const style = badgeStyles[item.type];
+        const style = badgeStyles[item.type] || badgeStyles.info;
         return (
           <Link
             key={item.id}
@@ -88,13 +88,13 @@ export function PatientStats({ stats = defaultStats }: { stats?: PatientStatItem
             >
               <div className="flex justify-between items-start mb-3">
                 <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${style.bg}`}
+                  className={`w-9 h-9 rounded-lg border flex items-center justify-center ${style.bg} ${style.border}`}
                 >
                   {item.icon}
                 </div>
                 {item.badge !== undefined && (
                   <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${style.bg} ${style.text} ${style.border}`}
                   >
                     {item.badge}
                   </span>

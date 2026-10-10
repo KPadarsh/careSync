@@ -21,9 +21,11 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [latestAlert, setLatestAlert] = useState<RealtimeNotification | null>(null);
 
   // Keep a ref of known IDs to protect against duplicate inserts across renders and reconnects
   const knownIdsRef = useRef<Set<string>>(new Set());
+  const isInitialLoadRef = useRef<boolean>(true);
 
   // 1. Authoritative synchronization from MongoDB REST API
   const syncWithApi = useCallback(async () => {
@@ -48,6 +50,15 @@ export function useNotifications() {
             createdAt: n.createdAt,
           };
         });
+
+        // Detect newly arrived unread notifications during polling (after initial cold load)
+        if (!isInitialLoadRef.current && knownIdsRef.current.size > 0) {
+          const fresh = normalized.filter((n) => !knownIdsRef.current.has(n.id) && !n.isRead);
+          if (fresh.length > 0) {
+            setLatestAlert(fresh[0]);
+          }
+        }
+        isInitialLoadRef.current = false;
 
         // Rebuild known IDs set
         const nextSet = new Set<string>();
@@ -108,6 +119,7 @@ export function useNotifications() {
 
       setNotifications((prev) => [newNotif, ...prev]);
       setUnreadCount((prev) => prev + 1);
+      setLatestAlert(newNotif);
     };
 
     if (socket) {
@@ -185,11 +197,17 @@ export function useNotifications() {
     }
   }, [syncWithApi]);
 
+  const clearLatestAlert = useCallback(() => {
+    setLatestAlert(null);
+  }, []);
+
   return {
     notifications,
     unreadCount,
     loading,
     isConnected,
+    latestAlert,
+    clearLatestAlert,
     markAsRead,
     markAllAsRead,
     refresh: syncWithApi,

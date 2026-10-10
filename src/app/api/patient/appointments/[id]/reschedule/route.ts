@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePatientSession } from "@/lib/auth";
-import { Appointment, Notification } from "@/models";
+import { Appointment } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 
 export async function PATCH(
   req: NextRequest,
@@ -25,7 +26,7 @@ export async function PATCH(
     const appointment = await Appointment.findOne({
       _id: id,
       patientId,
-    }).populate("doctorId", "name");
+    }).populate("doctorId", "name userId");
 
     if (!appointment) {
       return NextResponse.json(
@@ -65,17 +66,44 @@ export async function PATCH(
     appointment.notes = `Rescheduled by patient on ${new Date().toLocaleDateString()}`;
     await appointment.save();
 
-    const docRef = appointment.doctorId as unknown as { name?: string };
+    const docRef = appointment.doctorId as any;
     const doctorName = docRef?.name || "your doctor";
 
-    await Notification.create({
-      recipientId: user._id,
-      title: "Appointment Rescheduled",
-      message: `Your appointment with ${doctorName} has been rescheduled to ${new Date(date).toLocaleDateString()} at ${timeSlot}.`,
-      type: "appointment",
-      link: "/patient/appointments",
-      isRead: false,
-    });
+    // 1. Notify Patient
+    try {
+      await NotificationService.createNotification({
+        recipientUserId: user._id,
+        title: "Appointment Rescheduled",
+        message: `Your appointment with ${doctorName} has been rescheduled to ${new Date(date).toLocaleDateString()} at ${timeSlot}.`,
+        type: "appointment",
+        link: "/patient/appointments",
+        relatedResource: {
+          resourceType: "appointment",
+          resourceId: appointment._id.toString(),
+        },
+      });
+    } catch (e) {
+      console.error("Failed to notify patient of reschedule:", e);
+    }
+
+    // 2. Notify Doctor
+    try {
+      if (docRef?.userId) {
+        await NotificationService.createNotification({
+          recipientUserId: docRef.userId,
+          title: "Appointment Rescheduled",
+          message: `Patient ${user.name} has rescheduled their appointment to ${new Date(date).toLocaleDateString()} at ${timeSlot}.`,
+          type: "appointment",
+          link: "/doctor/queue",
+          relatedResource: {
+            resourceType: "appointment",
+            resourceId: appointment._id.toString(),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Failed to notify doctor of reschedule:", e);
+    }
 
     return NextResponse.json({
       success: true,

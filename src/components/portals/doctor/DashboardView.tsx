@@ -13,7 +13,9 @@ import {
   AlertTriangleIcon,
   RefreshIcon,
   StethoscopeIcon,
+  NotificationsIcon,
 } from "./DoctorIcons";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface DashboardData {
   doctor: {
@@ -80,6 +82,7 @@ interface DashboardData {
 
 export const DashboardView: React.FC = () => {
   const router = useRouter();
+  const { unreadCount: liveUnreadNotifs, notifications: liveNotifs } = useNotifications();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,16 +164,11 @@ export const DashboardView: React.FC = () => {
       <PageHeader
         title="Clinical Dashboard"
         description={`Good morning${data?.doctor?.name ? `, ${data.doctor.name}` : ""}. Here's your clinical schedule for today.`}
-        badge={
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />
-            {data?.doctor?.roomNumber || "Consultation Room"}
-          </span>
-        }
+        badge={{ label: data?.doctor?.roomNumber || "Consultation Room 302", tone: "primary" }}
         actions={
           <div className="flex items-center gap-2.5">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-sky-600" />
+              <span className="w-2 h-2 rounded-full bg-teal-600" />
               <span>{todayStr}</span>
             </div>
             <button
@@ -185,36 +183,64 @@ export const DashboardView: React.FC = () => {
         }
       />
 
+      {/* Realtime Clinical Alerts Banner */}
+      {liveUnreadNotifs > 0 && (
+        <div className="bg-sky-50/90 border border-sky-200/90 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-sky-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <NotificationsIcon className="w-4 h-4 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900">
+                  {liveUnreadNotifs} Pending Clinical {liveUnreadNotifs === 1 ? "Alert" : "Alerts"}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                  Needs Review
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 truncate mt-0.5 max-w-xl font-medium">
+                {liveNotifs[0]?.title ? `${liveNotifs[0].title}: ${liveNotifs[0].message}` : "You have unread triage handoffs and patient updates."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+            <Link
+              href="/doctor/notifications"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors"
+            >
+              <span>Review Notifications</span>
+              <ChevronRightIcon className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 4 Operational Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/doctor/patients">
           <StatCard
+            tone="primary"
             title="Today's Patients"
             value={stats.totalToday}
             subtext={`${stats.todayConsultationsCount} completed`}
-            icon={
-              <div className="text-sky-600">
-                <StethoscopeIcon className="w-4 h-4" />
-              </div>
-            }
+            icon={<StethoscopeIcon className="w-4 h-4" />}
           />
         </Link>
 
         <Link href="/doctor/queue">
           <StatCard
+            tone="warning"
             title="Patients Waiting"
             value={stats.waitingCount}
             subtext="Ready for consultation"
-            icon={
-              <div className="text-amber-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-              </div>
-            }
+            icon={<ClockIcon className="w-4 h-4" />}
           />
         </Link>
 
         <Link href="/doctor/queue">
           <StatCard
+            tone="info"
             title="In Consultation"
             value={stats.inConsultationCount}
             subtext={`${data?.doctor?.roomNumber || "Room 302"} active`}
@@ -229,14 +255,11 @@ export const DashboardView: React.FC = () => {
 
         <Link href="/doctor/follow-ups">
           <StatCard
+            tone="success"
             title="Follow-ups Today"
             value={stats.followUpsTodayCount}
             subtext="Scheduled reviews"
-            icon={
-              <div className="text-slate-600">
-                <ClockIcon className="w-4 h-4" />
-              </div>
-            }
+            icon={<ClockIcon className="w-4 h-4" />}
           />
         </Link>
       </div>
@@ -317,7 +340,7 @@ export const DashboardView: React.FC = () => {
                             <span className="text-xs sm:text-[13px] font-semibold text-slate-900 group-hover:text-sky-600 transition-colors">
                               {item.patient.name}
                             </span>
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-xs text-slate-500 font-medium">
                               {item.patient.gender}, {item.patient.age}y • {item.patient.mrn}
                             </span>
                           </Link>
@@ -453,11 +476,65 @@ export const DashboardView: React.FC = () => {
                       <p className="text-xs text-slate-800 leading-snug font-medium">
                         {act.title}
                       </p>
-                      <span className="text-[11px] text-slate-400 mt-0.5">
+                      <span className="text-xs text-slate-500 mt-0.5">
                         {act.detail}
                       </span>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Recent Clinical Notifications Card */}
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-slate-200/80 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Clinical Notifications
+                </h3>
+                {liveUnreadNotifs > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    {liveUnreadNotifs} unread
+                  </span>
+                )}
+              </div>
+              <Link
+                href="/doctor/notifications"
+                className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 transition-colors"
+              >
+                <span>View all</span>
+                <ChevronRightIcon className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {liveNotifs.length === 0 ? (
+                <p className="text-xs text-slate-400">
+                  No notifications recorded yet.
+                </p>
+              ) : (
+                liveNotifs.slice(0, 3).map((item) => (
+                  <Link
+                    key={item.id || item._id}
+                    href={item.link || "/doctor/notifications"}
+                    className={`p-2.5 rounded-lg border flex flex-col gap-1 transition-all ${
+                      item.isRead
+                        ? "bg-slate-50/60 border-slate-200/60 hover:bg-slate-100/70"
+                        : "bg-sky-50/70 border-sky-200/80 hover:bg-sky-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-900 truncate">
+                        {item.title}
+                      </span>
+                      {!item.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 ring-2 ring-white" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                      {item.message}
+                    </p>
+                  </Link>
                 ))
               )}
             </div>

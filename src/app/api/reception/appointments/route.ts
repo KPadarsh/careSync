@@ -3,6 +3,7 @@ import { z } from "zod";
 import { connectToDatabase } from "@/lib/db";
 import { requireReceptionSession } from "@/lib/auth";
 import { Appointment, Doctor, Patient, User, Queue, FollowUp, Notification } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 import { Types } from "mongoose";
 
 const CreateAppointmentSchema = z.object({
@@ -218,13 +219,43 @@ export async function POST(req: NextRequest) {
     }
 
     // Send notification to patient
-    await Notification.create({
-      recipientId: patient.userId,
-      title: "Appointment Scheduled",
-      message: `Your appointment with ${doctor.name} on ${apptDate.toLocaleDateString()} at ${validated.timeSlot} has been scheduled by reception.`,
-      type: "appointment",
-      link: "/patient/appointments",
-    });
+    if (patient.userId) {
+      try {
+        await NotificationService.createNotification({
+          recipientUserId: (patient.userId as any)._id || patient.userId,
+          title: "Appointment Scheduled",
+          message: `Your appointment with Dr. ${doctor.name} on ${apptDate.toLocaleDateString()} at ${validated.timeSlot} has been scheduled by reception.`,
+          type: "appointment",
+          link: "/patient/appointments",
+          relatedResource: {
+            resourceType: "appointment",
+            resourceId: newAppointment._id.toString(),
+          },
+        });
+      } catch (e) {
+        console.error("Failed to notify patient of booking:", e);
+      }
+    }
+
+    // Send notification to assigned Doctor
+    try {
+      const patientName = `${patient.firstName || ""} ${patient.lastName || ""}`.trim() || "Patient";
+      if (doctor.userId) {
+        await NotificationService.createNotification({
+          recipientUserId: doctor.userId,
+          title: "New Appointment Scheduled",
+          message: `Reception scheduled an appointment with you for ${patientName} on ${apptDate.toLocaleDateString()} at ${validated.timeSlot}.`,
+          type: "appointment",
+          link: "/doctor/queue",
+          relatedResource: {
+            resourceType: "appointment",
+            resourceId: newAppointment._id.toString(),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Failed to notify doctor of reception booking:", e);
+    }
 
     return NextResponse.json({
       success: true,

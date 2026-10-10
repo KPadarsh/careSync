@@ -99,7 +99,7 @@ export function DashboardView() {
 
             <Link
               href="/pathologist/reports"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#002444] text-xs font-semibold shadow-xs transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all"
             >
               <ReportsIcon className="w-3.5 h-3.5 text-teal-300" />
               <span>Open Review Queue ({metrics.awaitingReviewCount})</span>
@@ -123,11 +123,11 @@ export function DashboardView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               Awaiting Review
             </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
               <ClockIcon className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-[#002444]">
+          <div className="mt-3 text-3xl font-extrabold text-slate-900">
             {metrics.awaitingReviewCount}
           </div>
           <div className="text-xs text-amber-700 mt-1 flex items-center gap-1 font-medium">
@@ -152,10 +152,10 @@ export function DashboardView() {
               <MicroscopeIcon className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-[#002444]">
+          <div className="mt-3 text-3xl font-extrabold text-slate-900">
             {metrics.underReviewCount}
           </div>
-          <div className="text-xs text-blue-700 mt-1 font-medium">
+          <div className="text-xs text-sky-800 mt-1 font-medium">
             Active interpretation in progress
           </div>
         </button>
@@ -173,14 +173,14 @@ export function DashboardView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-rose-800">
               Correction Required
             </span>
-            <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center">
               <AlertTriangleIcon className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-[#002444]">
+          <div className="mt-3 text-3xl font-extrabold text-slate-900">
             {metrics.correctionRequiredCount}
           </div>
-          <div className="text-xs text-rose-700 mt-1 font-medium">
+          <div className="text-xs text-rose-800 mt-1 font-medium">
             Redraw / dilution flagged to lab
           </div>
         </button>
@@ -198,14 +198,14 @@ export function DashboardView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Recently Verified
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
               <VerifiedIcon className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 text-3xl font-extrabold text-[#002444]">
+          <div className="mt-3 text-3xl font-extrabold text-slate-900">
             {metrics.verifiedCount}
           </div>
-          <div className="text-xs text-emerald-700 mt-1 font-medium">
+          <div className="text-xs text-emerald-800 mt-1 font-medium">
             Finalized &amp; released to physicians
           </div>
         </button>
@@ -220,8 +220,8 @@ export function DashboardView() {
               onClick={() => setActiveTab("awaiting")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === "awaiting"
-                  ? "bg-[#00355f] text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
               }`}
             >
               Awaiting Review ({queues.awaiting.length})
@@ -230,8 +230,8 @@ export function DashboardView() {
               onClick={() => setActiveTab("underReview")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === "underReview"
-                  ? "bg-[#00355f] text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
               }`}
             >
               Under Review ({queues.underReview.length})
@@ -240,8 +240,8 @@ export function DashboardView() {
               onClick={() => setActiveTab("correction")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === "correction"
-                  ? "bg-[#00355f] text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
               }`}
             >
               Correction Required ({queues.correction.length})
@@ -250,8 +250,8 @@ export function DashboardView() {
               onClick={() => setActiveTab("verified")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === "verified"
-                  ? "bg-[#00355f] text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
               }`}
             >
               Recently Certified ({queues.verified.length})

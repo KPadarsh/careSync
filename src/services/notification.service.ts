@@ -2,6 +2,7 @@ import mongoose, { Types } from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Notification, INotification } from "@/models/Notification";
 import { User } from "@/models/User";
+import { Doctor } from "@/models/Doctor";
 import { normalizeRole, AppRole } from "@/lib/permissions";
 import { ServiceError } from "./service.error";
 
@@ -95,13 +96,21 @@ export class NotificationService {
       throw new ServiceError("Notification message is required", 400);
     }
 
-    const recipientObjectId =
+    let recipientObjectId =
       typeof recipientRaw === "string"
         ? new Types.ObjectId(recipientRaw)
         : recipientRaw;
 
     // 1. Authoritative verification: recipient User must exist and be active
-    const recipientUser = await User.findById(recipientObjectId).select("_id status role").lean();
+    let recipientUser = await User.findById(recipientObjectId).select("_id status role").lean();
+    if (!recipientUser) {
+      // Check if recipientObjectId is a Doctor document ID and resolve its linked User
+      const doctorDoc = await Doctor.findById(recipientObjectId).select("userId").lean();
+      if (doctorDoc?.userId) {
+        recipientObjectId = doctorDoc.userId as Types.ObjectId;
+        recipientUser = await User.findById(recipientObjectId).select("_id status role").lean();
+      }
+    }
     if (!recipientUser) {
       throw new ServiceError("Recipient user not found", 404);
     }
@@ -221,6 +230,15 @@ export class NotificationService {
     return createdNotifications;
   }
 
+  private static async resolveRecipientIds(userObjectId: Types.ObjectId): Promise<Types.ObjectId[]> {
+    const ids: Types.ObjectId[] = [userObjectId];
+    const linkedDoctor = await Doctor.findOne({ userId: userObjectId }).select("_id").lean();
+    if (linkedDoctor?._id) {
+      ids.push(linkedDoctor._id as Types.ObjectId);
+    }
+    return ids;
+  }
+
   /**
    * Retrieves notifications with strict recipient ownership enforcement.
    */
@@ -235,8 +253,12 @@ export class NotificationService {
     }
 
     const userObjectId = new Types.ObjectId(userId);
+    const recipientIds = await this.resolveRecipientIds(userObjectId);
     const filter: Record<string, unknown> = {
-      $or: [{ recipientUserId: userObjectId }, { recipientId: userObjectId }],
+      $or: [
+        { recipientUserId: { $in: recipientIds } },
+        { recipientId: { $in: recipientIds } },
+      ],
     };
 
     if (options.unreadOnly) {
@@ -259,7 +281,10 @@ export class NotificationService {
         .lean(),
       Notification.countDocuments(filter),
       Notification.countDocuments({
-        $or: [{ recipientUserId: userObjectId }, { recipientId: userObjectId }],
+        $or: [
+          { recipientUserId: { $in: recipientIds } },
+          { recipientId: { $in: recipientIds } },
+        ],
         isRead: false,
       }),
     ]);
@@ -282,8 +307,12 @@ export class NotificationService {
     }
 
     const userObjectId = new Types.ObjectId(userId);
+    const recipientIds = await this.resolveRecipientIds(userObjectId);
     return Notification.countDocuments({
-      $or: [{ recipientUserId: userObjectId }, { recipientId: userObjectId }],
+      $or: [
+        { recipientUserId: { $in: recipientIds } },
+        { recipientId: { $in: recipientIds } },
+      ],
       isRead: false,
     });
   }
@@ -300,10 +329,14 @@ export class NotificationService {
 
     const notifObjectId = new Types.ObjectId(notificationId);
     const userObjectId = new Types.ObjectId(userId);
+    const recipientIds = await this.resolveRecipientIds(userObjectId);
 
     const notification = await Notification.findOne({
       _id: notifObjectId,
-      $or: [{ recipientUserId: userObjectId }, { recipientId: userObjectId }],
+      $or: [
+        { recipientUserId: { $in: recipientIds } },
+        { recipientId: { $in: recipientIds } },
+      ],
     });
 
     if (!notification) {
@@ -327,10 +360,14 @@ export class NotificationService {
     }
 
     const userObjectId = new Types.ObjectId(userId);
+    const recipientIds = await this.resolveRecipientIds(userObjectId);
 
     const result = await Notification.updateMany(
       {
-        $or: [{ recipientUserId: userObjectId }, { recipientId: userObjectId }],
+        $or: [
+          { recipientUserId: { $in: recipientIds } },
+          { recipientId: { $in: recipientIds } },
+        ],
         isRead: false,
       },
       {

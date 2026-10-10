@@ -25,7 +25,7 @@ export function NotificationsView() {
     markAsRead,
     markAllAsRead,
   } = useNotifications();
-  const [filter, setFilter] = useState<"all" | "lab" | "queue" | "followup">("all");
+  const [filter, setFilter] = useState<"all" | "lab" | "queue" | "followup" | "appointment">("all");
 
   const filteredNotifications = notifications.filter((item) => {
     if (filter === "all") return true;
@@ -44,6 +44,15 @@ export function NotificationsView() {
         item.title?.toLowerCase().includes("queue") ||
         item.title?.toLowerCase().includes("patient") ||
         item.message?.toLowerCase().includes("ready")
+      );
+    }
+    if (filter === "appointment") {
+      return (
+        item.type?.toLowerCase().includes("appointment") ||
+        item.title?.toLowerCase().includes("appointment") ||
+        item.message?.toLowerCase().includes("appointment") ||
+        item.message?.toLowerCase().includes("schedule") ||
+        item.message?.toLowerCase().includes("cancel")
       );
     }
     if (filter === "followup") {
@@ -77,7 +86,12 @@ export function NotificationsView() {
         </div>
       );
     }
-    if (title.includes("follow") || type.includes("follow")) {
+    if (
+      title.includes("follow") ||
+      type.includes("follow") ||
+      title.includes("appointment") ||
+      type.includes("appointment")
+    ) {
       return (
         <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0">
           <IconCalendar className="w-5 h-5" />
@@ -96,6 +110,7 @@ export function NotificationsView() {
     const type = n.type?.toLowerCase() || "";
     if (title.includes("lab") || type.includes("lab")) return "View Lab Report";
     if (title.includes("follow") || type.includes("follow")) return "View Follow-up";
+    if (title.includes("appointment") || type.includes("appointment")) return "View Schedule";
     return "Open Queue";
   };
 
@@ -134,8 +149,9 @@ export function NotificationsView() {
       <div className="flex flex-wrap items-center gap-2">
         {[
           { id: "all", label: `All (${notifications.length})` },
-          { id: "lab", label: "Lab Reports" },
           { id: "queue", label: "Queue & Triage" },
+          { id: "appointment", label: "Appointments" },
+          { id: "lab", label: "Lab Reports" },
           { id: "followup", label: "Follow-ups" },
         ].map((tab) => (
           <button

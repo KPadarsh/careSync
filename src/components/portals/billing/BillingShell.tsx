@@ -154,9 +154,9 @@ export function BillingShell({ children, activeRoute }: BillingShellProps) {
       brandName="CareSync"
       brandTagline="Billing & Accounts"
       brandBadge="BILLING"
-      badgeColorClass="bg-blue-500/20 text-blue-300 border border-blue-500/30"
+      badgeColorClass="bg-teal-500/20 text-teal-300 border border-teal-500/30"
       brandIcon={
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shadow-xs shrink-0">
           <CurrencyDollarIcon className="w-4 h-4" />
         </div>
       }
@@ -176,7 +176,7 @@ export function BillingShell({ children, activeRoute }: BillingShellProps) {
       headerActions={
         <Link
           href="/billing/invoices/new"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
         >
           <span>+ Create Invoice</span>
         </Link>

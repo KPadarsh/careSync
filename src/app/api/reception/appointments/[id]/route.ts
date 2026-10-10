@@ -122,13 +122,30 @@ export async function PATCH(
         });
 
         // Also notify assigned doctor of patient arrival
-        const doctorUserId = (appointment.doctorId as any)?.userId;
+        let doctorUserId = (appointment.doctorId as any)?.userId;
+        if (!doctorUserId && appointment.doctorId) {
+          const docDoc = await Doctor.findById((appointment.doctorId as any)?._id || appointment.doctorId);
+          if (docDoc?.userId) doctorUserId = docDoc.userId;
+        }
+
         const patientName = (appointment.patientId as any)?.firstName 
           ? `${(appointment.patientId as any).firstName} ${(appointment.patientId as any).lastName || ""}`.trim()
           : "Patient";
+
         if (doctorUserId) {
           await NotificationService.createNotification({
             recipientUserId: doctorUserId,
+            title: `Patient Arrival: ${queue.ticketNumber}`,
+            message: `${patientName} has checked in and is proceeding to nurse triage station.`,
+            type: "queue",
+            link: "/doctor/queue",
+            relatedResource: {
+              resourceType: "queue",
+              resourceId: queue._id.toString(),
+            },
+          });
+        } else {
+          await NotificationService.notifyRole("DOCTOR", {
             title: `Patient Arrival: ${queue.ticketNumber}`,
             message: `${patientName} has checked in and is proceeding to nurse triage station.`,
             type: "queue",
@@ -206,6 +223,29 @@ export async function PATCH(
       appointment.notes = `${appointment.notes || ""}\nRescheduled by reception to ${newDate} ${newTimeSlot}`.trim();
       await appointment.save();
 
+      // Notify Doctor of reception reschedule
+      try {
+        const docUserId = (appointment.doctorId as any)?.userId;
+        const patientName = (appointment.patientId as any)?.firstName 
+          ? `${(appointment.patientId as any).firstName} ${(appointment.patientId as any).lastName || ""}`.trim()
+          : "Patient";
+        if (docUserId) {
+          await NotificationService.createNotification({
+            recipientUserId: docUserId,
+            title: "Appointment Rescheduled",
+            message: `Reception rescheduled appointment for ${patientName} to ${newDate} at ${newTimeSlot}.`,
+            type: "appointment",
+            link: "/doctor/queue",
+            relatedResource: {
+              resourceType: "appointment",
+              resourceId: appointment._id.toString(),
+            },
+          });
+        }
+      } catch (e) {
+        console.error("Failed to notify doctor of reception reschedule:", e);
+      }
+
       return NextResponse.json({
         success: true,
         message: "Appointment rescheduled successfully",
@@ -224,6 +264,29 @@ export async function PATCH(
         { appointmentId: appointment._id },
         { status: "cancelled" }
       );
+
+      // Notify Doctor of reception cancellation
+      try {
+        const docUserId = (appointment.doctorId as any)?.userId;
+        const patientName = (appointment.patientId as any)?.firstName 
+          ? `${(appointment.patientId as any).firstName} ${(appointment.patientId as any).lastName || ""}`.trim()
+          : "Patient";
+        if (docUserId) {
+          await NotificationService.createNotification({
+            recipientUserId: docUserId,
+            title: "Appointment Cancelled",
+            message: `Appointment for ${patientName} was cancelled by reception. Reason: ${appointment.cancellationReason}`,
+            type: "appointment",
+            link: "/doctor/queue",
+            relatedResource: {
+              resourceType: "appointment",
+              resourceId: appointment._id.toString(),
+            },
+          });
+        }
+      } catch (e) {
+        console.error("Failed to notify doctor of reception cancellation:", e);
+      }
 
       return NextResponse.json({
         success: true,

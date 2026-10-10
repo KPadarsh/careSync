@@ -264,10 +264,31 @@ export async function POST(
 
       // Notify ordering doctor via NotificationService
       try {
+        let recipientUserId: any = null;
         const doctorDoc = await Doctor.findById(report.doctorId);
         if (doctorDoc?.userId) {
+          recipientUserId = doctorDoc.userId;
+        } else {
+          const directUser = await User.findById(report.doctorId);
+          if (directUser) {
+            recipientUserId = directUser._id;
+          }
+        }
+
+        if (recipientUserId) {
           await NotificationService.createNotification({
-            recipientUserId: doctorDoc.userId,
+            recipientUserId,
+            title: `Certified Lab Results: ${report.testName}`,
+            message: `Diagnostic report for your patient has been certified and finalized by Pathologist ${session.user.name}.`,
+            type: "lab_report",
+            link: `/doctor/lab/${report._id}`,
+            relatedResource: {
+              resourceType: "lab_report",
+              resourceId: report._id.toString(),
+            },
+          });
+        } else {
+          await NotificationService.notifyRole("DOCTOR", {
             title: `Certified Lab Results: ${report.testName}`,
             message: `Diagnostic report for your patient has been certified and finalized by Pathologist ${session.user.name}.`,
             type: "lab_report",

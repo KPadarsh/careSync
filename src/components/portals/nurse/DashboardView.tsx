@@ -165,7 +165,7 @@ export const DashboardView: React.FC = () => {
 
             <Link
               href="/nurse/queue"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all"
             >
               <span>Open Patient Queue</span>
               <ChevronRightIcon size={14} />
@@ -355,14 +355,14 @@ export const DashboardView: React.FC = () => {
                           </td>
                           <td className="py-3 px-3.5">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                                 isWaiting
-                                  ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
                                   : isInAssessment
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200/60"
+                                  ? "bg-sky-50 text-sky-800 border border-sky-200"
                                   : isReady
-                                  ? "bg-teal-50 text-teal-700 border border-teal-200/60"
-                                  : "bg-slate-100 text-slate-600"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                  : "bg-slate-100 text-slate-700 border border-slate-200"
                               }`}
                             >
                               {item.status.replace("-", " ")}
@@ -372,7 +372,7 @@ export const DashboardView: React.FC = () => {
                             {isWaiting && (
                               <Link
                                 href={`/nurse/assessments/${pId}`}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-2xs"
                               >
                                 <span>Start Assessment</span>
                               </Link>

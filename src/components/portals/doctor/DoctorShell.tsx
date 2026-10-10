@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -32,13 +33,25 @@ export const DoctorShell: React.FC<DoctorShellProps> = ({ children, activeRoute 
   const { user: currentUser } = useCurrentUser();
   const [globalSearch, setGlobalSearch] = useState("");
   const [queueCount, setQueueCount] = useState<number>(0);
-  const { unreadCount: unreadNotifs } = useNotifications();
+  const { unreadCount: unreadNotifs, latestAlert, clearLatestAlert } = useNotifications();
+  const [toastNotification, setToastNotification] = useState<any>(null);
   const [doctorInfo, setDoctorInfo] = useState({
     name: "Doctor",
     specialty: "Clinical Medicine",
     room: "Consultation Suite",
     avatar: "",
   });
+
+  useEffect(() => {
+    if (latestAlert) {
+      setToastNotification(latestAlert);
+      const timer = setTimeout(() => {
+        setToastNotification(null);
+        clearLatestAlert();
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [latestAlert, clearLatestAlert]);
 
   useEffect(() => {
     async function loadStats() {
@@ -214,6 +227,52 @@ export const DoctorShell: React.FC<DoctorShellProps> = ({ children, activeRoute 
       activeRoute={activeRoute}
     >
       {children}
+
+      {/* Realtime Doctor Notification Toast Popup */}
+      {toastNotification && (
+        <div className="fixed top-5 right-5 z-50 max-w-sm w-full bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700/80 p-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 border border-sky-500/30">
+              <NotificationsIcon className="w-4 h-4 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white truncate">
+                  {toastNotification.title}
+                </span>
+                <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  New Alert
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 line-clamp-2 leading-relaxed">
+                {toastNotification.message}
+              </p>
+              <div className="flex items-center gap-2 mt-2.5">
+                <Link
+                  href={toastNotification.link || "/doctor/notifications"}
+                  onClick={() => {
+                    setToastNotification(null);
+                    clearLatestAlert();
+                  }}
+                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-colors shadow-xs"
+                >
+                  View Details
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToastNotification(null);
+                    clearLatestAlert();
+                  }}
+                  className="px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 };

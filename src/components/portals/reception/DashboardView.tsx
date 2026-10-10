@@ -170,6 +170,7 @@ export function DashboardView() {
       <PageHeader
         title="Reception Dashboard"
         description="Real-time outpatient operations • Station 01 Main Lobby"
+        badge={{ label: "Main Reception Lobby", tone: "primary" }}
         action={
           <div className="flex items-center gap-2">
             <button
@@ -327,38 +328,38 @@ export function DashboardView() {
                         <td className="py-3 px-4">
                           <Link
                             href={`/reception/patients/${appt.patientId?._id}`}
-                            className="font-medium text-[#00355f] hover:underline block"
+                            className="font-medium text-slate-900 hover:text-teal-700 hover:underline block"
                           >
                             {appt.patientId?.userId?.name || "Unknown Patient"}
                           </Link>
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-xs text-slate-500 font-mono font-medium">
                             {appt.patientId?.mrn}
                           </span>
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <p className="font-medium text-slate-700">{appt.doctorId?.name}</p>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-xs text-slate-500 font-medium">
                             {appt.doctorId?.department} • {appt.doctorId?.roomNumber}
                           </span>
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           {isCheckedIn && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
                               Checked-in
                             </span>
                           )}
                           {isCompleted && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                               Completed
                             </span>
                           )}
                           {isConfirmed && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200">
                               Confirmed
                             </span>
                           )}
                           {appt.status === "cancelled" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
                               Cancelled
                             </span>
                           )}

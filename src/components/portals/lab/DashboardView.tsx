@@ -95,51 +95,51 @@ export const DashboardView: React.FC = () => {
       case "requested":
       case "pending":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 text-xs font-semibold">
             Requested
           </span>
         );
       case "sample_pending":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
             Sample Pending
           </span>
         );
       case "sample_collected":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-semibold">
             Sample Collected
           </span>
         );
       case "processing":
       case "in-progress":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-xs font-semibold">
             Processing
           </span>
         );
       case "result_entered":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-900 border border-cyan-200 text-xs font-semibold">
             Result Entered
           </span>
         );
       case "submitted_for_review":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
             Submitted for Review
           </span>
         );
       case "verified":
       case "finalized":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold">
             Pathology Verified
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-medium">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
             {status}
           </span>
         );
@@ -202,7 +202,7 @@ export const DashboardView: React.FC = () => {
 
             <Link
               href="/lab/requests"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#00355f] text-white hover:bg-[#0f4c81] text-xs font-semibold shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-all"
             >
               <span>View All Requisitions</span>
               <ChevronRightIcon size={14} />

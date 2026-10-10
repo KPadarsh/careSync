@@ -13,6 +13,7 @@ import {
   Consultation,
   Visit,
 } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 
 export async function GET() {
   try {
@@ -220,6 +221,28 @@ export async function GET() {
 
     recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+    // 6. Clinical notifications for doctor
+    let unreadNotificationsCount = 0;
+    let recentNotifications: any[] = [];
+    try {
+      const notifData = await NotificationService.getNotifications(session.user._id.toString(), {
+        limit: 5,
+      });
+      unreadNotificationsCount = notifData.unreadCount;
+      recentNotifications = notifData.notifications.map((n: any) => ({
+        id: (n._id || n.id).toString(),
+        _id: (n._id || n.id).toString(),
+        title: n.title,
+        message: n.message,
+        type: n.type || "system",
+        link: n.link || "/doctor/dashboard",
+        isRead: !!n.isRead,
+        createdAt: n.createdAt,
+      }));
+    } catch (notifErr) {
+      console.warn("Failed to load doctor notifications for dashboard:", notifErr);
+    }
+
     return NextResponse.json({
       doctor: {
         _id: session.doctor._id.toString(),
@@ -237,10 +260,12 @@ export async function GET() {
         pendingLabReportsCount,
         followUpsTodayCount,
         totalToday: waitingCount + inConsultationCount + todayConsultationsCount,
+        unreadNotificationsCount,
       },
       queue: enrichedQueue,
       quickAttention,
       recentActivity: recentActivity.slice(0, 6),
+      recentNotifications,
     });
   } catch (error: any) {
     console.error("Doctor dashboard API error:", error);

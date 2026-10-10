@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { requirePatientSession } from "@/lib/auth";
-import { Appointment, Notification } from "@/models";
+import { Appointment } from "@/models";
+import { NotificationService } from "@/services/notification.service";
 
 export async function PATCH(
   req: NextRequest,
@@ -19,7 +20,7 @@ export async function PATCH(
     const appointment = await Appointment.findOne({
       _id: id,
       patientId,
-    }).populate("doctorId", "name");
+    }).populate("doctorId", "name userId");
 
     if (!appointment) {
       return NextResponse.json(
@@ -39,17 +40,44 @@ export async function PATCH(
     appointment.cancellationReason = reason;
     await appointment.save();
 
-    const docRef = appointment.doctorId as unknown as { name?: string };
+    const docRef = appointment.doctorId as any;
     const doctorName = docRef?.name || "your doctor";
 
-    await Notification.create({
-      recipientId: user._id,
-      title: "Appointment Cancelled",
-      message: `Your appointment with ${doctorName} on ${new Date(appointment.date).toLocaleDateString()} was cancelled.`,
-      type: "appointment",
-      link: "/patient/appointments",
-      isRead: false,
-    });
+    // 1. Notify Patient
+    try {
+      await NotificationService.createNotification({
+        recipientUserId: user._id,
+        title: "Appointment Cancelled",
+        message: `Your appointment with ${doctorName} on ${new Date(appointment.date).toLocaleDateString()} was cancelled.`,
+        type: "appointment",
+        link: "/patient/appointments",
+        relatedResource: {
+          resourceType: "appointment",
+          resourceId: appointment._id.toString(),
+        },
+      });
+    } catch (e) {
+      console.error("Failed to notify patient of cancellation:", e);
+    }
+
+    // 2. Notify Doctor
+    try {
+      if (docRef?.userId) {
+        await NotificationService.createNotification({
+          recipientUserId: docRef.userId,
+          title: "Appointment Cancelled",
+          message: `Patient ${user.name} has cancelled their appointment on ${new Date(appointment.date).toLocaleDateString()} at ${appointment.timeSlot}.`,
+          type: "appointment",
+          link: "/doctor/queue",
+          relatedResource: {
+            resourceType: "appointment",
+            resourceId: appointment._id.toString(),
+          },
+        });
+      }
+    } catch (e) {
+      console.error("Failed to notify doctor of cancellation:", e);
+    }
 
     return NextResponse.json({
       success: true,

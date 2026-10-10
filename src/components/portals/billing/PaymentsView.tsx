@@ -77,7 +77,7 @@ export function PaymentsView() {
 
       {/* Summary Chips */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
+        <div className="p-5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
               Total Transactions Logged
@@ -86,28 +86,28 @@ export function PaymentsView() {
               {payments.length}
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200/80">
             <PaymentsIcon className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
+        <div className="p-5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
               Cumulative Amount Collected
             </span>
-            <div className="text-3xl font-extrabold text-emerald-600 font-mono mt-1">
+            <div className="text-3xl font-extrabold text-emerald-700 font-mono mt-1">
               ${totalCollected.toFixed(2)}
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200/80">
             <CheckCircleIcon className="w-6 h-6" />
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-xs">
+      <div className="bg-white border border-slate-200/80 p-3.5 rounded-xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-xs">
         <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
           {[
             { id: "all", label: "All Methods" },
@@ -120,9 +120,9 @@ export function PaymentsView() {
             <button
               key={tab.id}
               onClick={() => setMethodFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 methodFilter === tab.id
-                  ? "bg-emerald-600 text-white font-semibold shadow-xs"
+                  ? "bg-slate-900 text-white font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
